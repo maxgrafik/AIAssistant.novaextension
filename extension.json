@@ -116,26 +116,26 @@
             {
                 "title": "Ask Assistant about selection …",
                 "command": "maxgrafik.AIAssistant.cmd.askAssistantWithSelection",
-                "when": "editorHasFocus && editorHasSelection && !editorHasMultipleSelections",
+                "when": "editorHasFocus && editorHasSelection && !editorHasMultipleSelections"
             }
         ],
         "extensions": [
             {
                 "title": "New Chat",
-                "command": "maxgrafik.AIAssistant.cmd.newChat",
+                "command": "maxgrafik.AIAssistant.cmd.newChat"
             },
             {
                 "title": "Load Chat …",
-                "command": "maxgrafik.AIAssistant.cmd.openChat",
+                "command": "maxgrafik.AIAssistant.cmd.openChat"
             },
             {"separator": true},
             {
                 "title": "Clear Chat",
-                "command": "maxgrafik.AIAssistant.cmd.clearChat",
+                "command": "maxgrafik.AIAssistant.cmd.clearChat"
             },
             {
                 "title": "Save Chat …",
-                "command": "maxgrafik.AIAssistant.cmd.saveChat",
+                "command": "maxgrafik.AIAssistant.cmd.saveChat"
             },
             {"separator": true},
             {
@@ -278,7 +278,7 @@
                     "type": "stringArray",
                     "title": "List Files Exclusion",
                     "description": "“List Files” always skips hidden files and folders (e.g., .git). Add more paths to prevent the assistant from scanning content-heavy folders, like “node_modules”. Paths are relative to the Workspace root.",
-                    "default": ["node_modules", "build", "dist"],
+                    "default": ["node_modules", "build", "dist"]
                 },
                 {
                     "key": "maxgrafik.AIAssistant.config.permissionReadFiles",
