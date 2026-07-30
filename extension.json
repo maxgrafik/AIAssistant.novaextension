@@ -116,7 +116,7 @@
             {
                 "title": "Ask Assistant about selection …",
                 "command": "maxgrafik.AIAssistant.cmd.askAssistantWithSelection",
-                "when": "editorHasFocus && editorHasSelection && !editor.editorHasMultipleSelections",
+                "when": "editorHasFocus && editorHasSelection && !editorHasMultipleSelections",
             }
         ],
         "extensions": [
