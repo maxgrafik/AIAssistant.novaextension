@@ -2,6 +2,8 @@
 
 Bring the power of **AI** directly into your Nova workflow. This extension integrates an AI assistant into your sidebar, allowing you to pair-program without ever leaving your workspace.
 
+![screenshot](https://raw.githubusercontent.com/maxgrafik/AIAssistant.novaextension/main/Images/screenshot.jpg)
+
 
 ## 🚀 Features
 
