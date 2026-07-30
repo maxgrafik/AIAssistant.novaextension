@@ -1,0 +1,370 @@
+/**
+ * apiHandler.js
+ * AI Assistant
+ *
+ * @copyright 2026 Hendrik Meinl
+ */
+
+const ToolHandler = require("toolHandler.js");
+
+class APIHandler {
+
+    constructor(config, emitter, session) {
+
+        this.config = config;
+        this.emitter = emitter;
+
+        this.session = session;
+
+        this.toolHandler = new ToolHandler(config, emitter);
+
+
+        //! Events
+
+        emitter.on("sendMessage", (message) => {
+            this.sendMessage(message);
+        });
+    }
+
+
+    //! Get model list
+
+    async getModelList() {
+
+        try {
+
+            if (!this.session.serverURL && !this.config.serverURL) {
+                throw new Error("No Server URL configured");
+            }
+
+            const url = (this.session.serverURL || this.config.serverURL) + "/models";
+
+            const response = await fetch(url, {
+                method: "GET",
+                headers: {
+                    ...(this.config.APIKey ? { "Authorization": `Bearer ${this.config.APIKey}` } : {}),
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error(`Server returned an error:\n${response.statusText}`);
+            }
+
+            const modelList = await response.json();
+
+            if (modelList.data) {
+                return modelList.data.map(model => model.id);
+            } else {
+                throw new Error("Sorry, but the model list is in an unknown format");
+            }
+
+        } catch (error) {
+            this.handleError(error);
+        }
+    }
+
+
+    //! Chat
+
+    async sendMessage(prompt) {
+
+        try {
+
+            if (!this.session.serverURL && !this.config.serverURL) {
+                throw new Error("No Server URL configured");
+            }
+
+            if (!this.session.modelID) {
+                throw new Error("No Model selected");
+            }
+
+
+            // Handle prompt
+
+            if (Array.isArray(prompt)) {
+
+                // Prompt is an array of tool call results
+
+                if (prompt.length === 0) {
+                    this.emitter.emit("removeIntermediateMessage");
+                    return; // Not a single valid result?
+                }
+
+                const toolCallResults = prompt.map(result => {
+                    return {
+                        role: "tool",
+                        tool_call_id: result.id,
+                        content: JSON.stringify(result.content),
+                    };
+                });
+
+                // Add tool call results to current chat session
+
+                for (const result of toolCallResults) {
+                    this.session.addMessage(result);
+                }
+
+                // Show intermediate assistant message
+
+                this.emitter.emit("addIntermediateMessage");
+
+
+            } else if (typeof prompt === "string") {
+
+                // Prompt is a user message
+
+                const userMessage = {
+                    role: "user",
+                    content: prompt
+                };
+
+                // Add user message to current chat session
+
+                this.session.addMessage(userMessage);
+
+                // Show intermediate assistant message
+
+                this.emitter.emit("addIntermediateMessage");
+
+
+            } else {
+                throw new Error("Unknown input type for sendMessage");
+            }
+
+
+            // Get all messages
+
+            let messages = this.session.getMessages();
+
+            // Prune chat history, if contextStrategy is "Sliding Window"
+            // and messages.length > config.messageLimit
+
+            if (
+                this.config.contextStrategy === 1 &&
+                messages.length > this.config.messageLimit
+            ) {
+                messages = this.pruneHistory(messages);
+            }
+
+
+            // Check Tool Use
+
+            const allowToolUse = nova.workspace.path && this.config.allowToolUse;
+
+
+            // Fetch stream
+
+            const url = (this.session.serverURL || this.config.serverURL) + "/chat/completions";
+
+            const response = await fetch(url, {
+                method: "POST",
+                headers: {
+                    ...(this.config.APIKey ? { "Authorization": `Bearer ${this.config.APIKey}` } : {}),
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    session_id: this.session.ID,
+                    model: this.session.modelID,
+                    messages: messages,
+                    max_tokens: this.config.maxTokens || 2048,
+                    temperature: Number(this.config.temperature.replace(",", ".")) || 0.2,
+                    top_p: Number(this.config.topP.replace(",", ".")) || 0.9,
+                    tools: allowToolUse ? this.toolHandler.toolSchemas : [],
+                    tool_choice: allowToolUse ? "auto" : "none",
+                    stream: true,
+                }),
+            });
+
+            if (!response.ok) {
+                const e = await response.json();
+                if (typeof e === "object" && !Array.isArray(e) && e !== null && e.error) {
+                    throw new Error(e.error.message);
+                } else {
+                    throw new Error(`Server returned an error:\n${response.statusText}`);
+                }
+            }
+
+
+            // Await and parse SSE messages
+
+            const chatCompletionChunks = await this.parseResponseBody(response.body);
+
+
+            // Get message content
+
+            let content = "";
+            for (const chunk of chatCompletionChunks) {
+                content += chunk.choices?.[0]?.delta?.content || "";
+            }
+
+
+            // Get tool calls
+
+            const toolCalls = await this.parseToolCalls(chatCompletionChunks);
+
+
+            // Create assistant message
+
+            const assistantMessage = {
+                role: "assistant",
+                content: content || "",
+                ...(toolCalls.length ? { tool_calls: toolCalls } : {})
+            };
+
+            this.session.addMessage(assistantMessage);
+            this.emitter.emit("removeIntermediateMessage");
+
+
+            // Dispatch tool calls
+
+            if (toolCalls.length) {
+                await this.toolHandler.dispatch(toolCalls);
+            }
+
+        } catch (error) {
+            this.emitter.emit("removeIntermediateMessage");
+            this.handleError(error);
+        }
+    }
+
+
+    //! Helper
+
+    pruneHistory(messages) {
+
+        const limit = this.config.messageLimit || 20;
+        const start = Math.max(1, messages.length - limit);
+
+        const systemMessage = messages[0];
+        const recentMessages = messages.slice(start);
+
+        const index = recentMessages.findIndex(msg => msg.role === "user");
+
+        if (index < 0) {
+            return [systemMessage];
+        }
+
+        return [systemMessage, ...recentMessages.slice(index)];
+    }
+
+    async parseResponseBody(stream) {
+
+        const reader = stream.getReader();
+        const decoder = new TextDecoder();
+
+        const out = [];
+
+        let buffer = "";
+        let currentDataLines = [];
+
+        // eslint-disable-next-line no-constant-condition
+        while (true) {
+
+            const { value, done } = await reader.read();
+
+            if (done) {
+                break;
+            }
+
+            buffer += decoder.decode(value, { stream: true });
+
+            const lines = buffer.split(/\r?\n/);
+
+            buffer = lines.pop() ?? "";
+
+            for (const rawLine of lines) {
+
+                const line = rawLine.trimEnd();
+
+                if (line.startsWith("data:")) {
+                    currentDataLines.push(line.slice(5).trimStart());
+                }
+
+                if (line === "") { // Blank line -> end of SSE message
+
+                    if (currentDataLines.length) {
+
+                        const payload = currentDataLines.join("\n").trim();
+                        currentDataLines = [];
+
+                        if (!payload) {
+                            continue;
+                        }
+
+                        if (payload === "[DONE]") {
+                            reader.releaseLock();
+                            return out;
+                        }
+
+                        out.push(JSON.parse(payload));
+                    }
+
+                    continue;
+                }
+            }
+        }
+
+        // Flush any trailing SSE message
+
+        const tail = buffer.trim();
+        if (tail) {
+            const line = tail.match(/^data:\s*(.+)$/);
+            if (line) {
+                const payload = line[1].trim();
+                if (payload && payload !== "[DONE]") {
+                    out.push(JSON.parse(payload));
+                }
+            }
+        }
+
+        reader.releaseLock();
+        return out;
+    }
+
+    async parseToolCalls(chatCompletion) {
+
+        const toolCalls = [];
+
+        for (const chunk of chatCompletion) {
+
+            const toolCallArray = chunk.choices?.[0]?.delta?.tool_calls;
+
+            if (!Array.isArray(toolCallArray)) {
+                continue;
+            }
+
+            for (const item of toolCallArray) {
+
+                const id   = item.id;
+                const name = item.function.name;
+                const args = item.function.arguments;
+
+                const toolCall = toolCalls[item.index];
+
+                if (!toolCall) {
+                    toolCalls.push({
+                        index: toolCalls.length,
+                        id: id,
+                        type: "function",
+                        function: {
+                            name: name,
+                            arguments: args || "",
+                        }
+                    });
+                } else {
+                    id   && (toolCall.id = id);
+                    name && (toolCall.function.name = name);
+                    args && (toolCall.function.arguments += args);
+                }
+            }
+        }
+
+        return toolCalls;
+    }
+
+    handleError(error) {
+        nova.workspace.showErrorMessage(error.message);
+    }
+}
+
+module.exports = APIHandler;

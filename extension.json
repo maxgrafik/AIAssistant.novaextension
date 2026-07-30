@@ -1,0 +1,498 @@
+{
+    "identifier": "maxgrafik.AIAssistant",
+    "name": "AI Assistant",
+    "organization": "Hendrik Meinl",
+    "description": "AI Assistant for Nova",
+    "version": "0.1.0",
+    "categories": ["sidebars", "commands"],
+    "repository": "https://github.com/maxgrafik/AIAssistant.novaextension",
+    "bugs": "https://github.com/maxgrafik/AIAssistant.novaextension/issues",
+    "license": "MIT",
+
+    "main": "main.js",
+
+    "activationEvents": ["*"],
+
+    "entitlements": {
+        "requests": true,
+        "clipboard": true,
+        "filesystem": "readwrite",
+        "process": true
+    },
+
+    "sidebars": [
+        {
+            "id": "assistant",
+            "name": "Assistant",
+            "smallImage": "assistant-small",
+            "largeImage": "assistant-large",
+            "sections": [
+                {
+                    "id": "assistant-chat",
+                    "name": "Chat",
+                    "allowMultiple": false,
+                    "placeholderImage": "assistant-large",
+                    "placeholderText": "How can I help you today?",
+                    "headerCommands": [
+                        {
+                            "title": "Ask",
+                            "tooltip": "Ask Assistant …",
+                            "image": "btn-chat",
+                            "command": "maxgrafik.AIAssistant.cmd.askAssistant"
+                        },
+                        {
+                            "title": "Open",
+                            "tooltip": "Open Chat …",
+                            "image": "btn-folder",
+                            "command": "maxgrafik.AIAssistant.cmd.openChat"
+                        }
+                    ],
+                    "contextCommands": [
+                        {
+                            "title": "Copy code",
+                            "command": "maxgrafik.AIAssistant.ctx.copyCode",
+                            "when": "viewItem == 'isCodeSnippet'"
+                        },
+                        {
+                            "title": "Copy message",
+                            "command": "maxgrafik.AIAssistant.ctx.copyMessage",
+                            "when": "viewItem == 'isMessage'"
+                        },
+                        {"separator": true},
+                        {
+                            "title": "Show/Hide All",
+                            "command": "maxgrafik.AIAssistant.cmd.toggleView"
+                        },
+                        {"separator": true},
+                        {
+                            "title": "New Chat",
+                            "command": "maxgrafik.AIAssistant.cmd.newChat"
+                        },
+                        {
+                            "title": "Open Chat …",
+                            "command": "maxgrafik.AIAssistant.cmd.openChat"
+                        },
+                        {"separator": true},
+                        {
+                            "title": "Clear Chat",
+                            "command": "maxgrafik.AIAssistant.cmd.clearChat"
+                        },
+                        {
+                            "title": "Save Chat …",
+                            "command": "maxgrafik.AIAssistant.cmd.saveChat"
+                        },
+                        {"separator": true},
+                        {
+                            "title": "Export Markdown …",
+                            "command": "maxgrafik.AIAssistant.cmd.exportMarkdown"
+                        }
+
+                    ]
+                },
+                {
+                    "id": "assistant-session",
+                    "name": "Info",
+                    "allowMultiple": false,
+                    "headerCommands": [
+                        {
+                            "title": "Help",
+                            "image": "btn-help",
+                            "tooltip": "Help",
+                            "command": "maxgrafik.AIAssistant.cmd.openHelp"
+                        }
+                    ]
+                }
+            ]
+        }
+    ],
+
+    "commands": {
+        "editor": [
+            {
+                "title": "Ask Assistant …",
+                "command": "maxgrafik.AIAssistant.cmd.askAssistant",
+                "when": "editorHasFocus"
+            },
+            {
+                "title": "Ask Assistant about selection …",
+                "command": "maxgrafik.AIAssistant.cmd.askAssistantWithSelection",
+                "when": "editorHasFocus && editorHasSelection && !editor.editorHasMultipleSelections",
+            }
+        ],
+        "extensions": [
+            {
+                "title": "New Chat",
+                "command": "maxgrafik.AIAssistant.cmd.newChat",
+            },
+            {
+                "title": "Load Chat …",
+                "command": "maxgrafik.AIAssistant.cmd.openChat",
+            },
+            {"separator": true},
+            {
+                "title": "Clear Chat",
+                "command": "maxgrafik.AIAssistant.cmd.clearChat",
+            },
+            {
+                "title": "Save Chat …",
+                "command": "maxgrafik.AIAssistant.cmd.saveChat",
+            },
+            {"separator": true},
+            {
+                "title": "Export Markdown …",
+                "command": "maxgrafik.AIAssistant.cmd.exportMarkdown"
+            },
+            {"separator": true},
+            {
+                "title": "Help",
+                "command": "maxgrafik.AIAssistant.cmd.openHelp"
+            }
+        ]
+    },
+
+    "config": [
+        {
+            "key": "maxgrafik.AIAssistant.config.sectionServer",
+            "type": "section",
+            "title": "Server",
+            "description": "Your inference provider with OpenAI compatible API endpoints [/models, /chat/completions]",
+            "children": [
+                {
+                    "key": "maxgrafik.AIAssistant.config.serverURL",
+                    "type": "string",
+                    "title": "URL",
+                    "placeholder": "http://127.0.0.1:1337/v1"
+                },
+                {
+                    "key": "maxgrafik.AIAssistant.config.APIKey",
+                    "type": "string",
+                    "title": "API Key",
+                    "description": "Usually not required when running locally (loopback connection)",
+                    "placeholder": "sk-"
+                }
+            ]
+        },
+        {
+            "key": "maxgrafik.AIAssistant.config.sectionChat",
+            "type": "section",
+            "title": "Chat",
+            "description": "Configure how the chat history is displayed",
+            "children": [
+                {
+                    "key": "maxgrafik.AIAssistant.config.chatWrapWidth",
+                    "type": "number",
+                    "min": 40,
+                    "title": "Wrap Width",
+                    "default": 60
+                },
+                {
+                    "key": "maxgrafik.AIAssistant.config.plainText",
+                    "type": "boolean",
+                    "title": "Plain Text",
+                    "description": "Remove Markdown syntax from messages",
+                    "default": true
+                },
+                {
+                    "key": "maxgrafik.AIAssistant.config.showLastTurnOnly",
+                    "type": "boolean",
+                    "title": "Show last turn only",
+                    "description": "This will only show your last prompt and the assistant’s answer (preserves context without cluttering the sidebar)",
+                    "default": true
+                },
+                {
+                    "key": "maxgrafik.AIAssistant.config.autoSave",
+                    "type": "boolean",
+                    "title": "Auto Save",
+                    "description": "Save the current chat to “[Workspace]/.assistant/autosave.json” after each turn",
+                    "default": false
+                },
+                {
+                    "key": "maxgrafik.AIAssistant.config.autoLoad",
+                    "type": "boolean",
+                    "title": "Auto Load",
+                    "description": "Load the autosave file when opening a Workspace",
+                    "default": false
+                }
+            ]
+        },
+        {
+            "key": "maxgrafik.AIAssistant.config.sectionModel",
+            "type": "section",
+            "title": "Model",
+            "description": "Configure model parameters and the assistant persona",
+            "children": [
+                {
+                    "key": "maxgrafik.AIAssistant.config.systemPrompt",
+                    "type": "text",
+                    "title": "System Prompt",
+                    "placeholder": "You are an expert software engineer and coding assistant.",
+                    "default": ""
+                },
+                {
+                    "key": "maxgrafik.AIAssistant.config.maxTokens",
+                    "type": "number",
+                    "min": 0,
+                    "title": "Max Tokens",
+                    "placeholder": "2048",
+                    "default": 2048
+                },
+                {
+                    "key": "maxgrafik.AIAssistant.config.temperature",
+                    "type": "string",
+                    "title": "Temperature",
+                    "placeholder": "0.2",
+                    "default": "0.2"
+                },
+                {
+                    "key": "maxgrafik.AIAssistant.config.topP",
+                    "type": "string",
+                    "title": "Top-P",
+                    "placeholder": "0.9",
+                    "default": "0.9"
+                }
+            ]
+        },
+        {
+            "key": "maxgrafik.AIAssistant.config.sectionTools",
+            "type": "section",
+            "title": "Tools",
+            "description": "All tool calls are routed through the extension (permission checks, path sanitizing, etc). The assistant’s use of the tools below is restricted to the current Workspace. So – no Workspace, no tools. However, this does not prevent the AI from running wild. You control what is allowed, and whether each action has to be approved first. If you don’t trust your AI (which you shouldn’t), leave “Allow Tool Use” disabled.",
+            "children": [
+                {
+                    "key": "maxgrafik.AIAssistant.config.allowToolUse",
+                    "type": "boolean",
+                    "title": "Allow Tool Use (Function Calling)",
+                    "default": false
+                },
+                {
+                    "key": "maxgrafik.AIAssistant.config.permissionListFiles",
+                    "type": "enum",
+                    "radio": false,
+                    "title": "List Files",
+                    "description": "Allows the assistant to see the contents of a folder in your Workspace",
+                    "values": [[0, "Deny"], [1, "Always ask"], [2, "Allow"]],
+                    "default": 0
+                },
+                {
+                    "key": "maxgrafik.AIAssistant.config.exclusionFileList",
+                    "type": "stringArray",
+                    "title": "List Files Exclusion",
+                    "description": "“List Files” always skips hidden files and folders (e.g., .git). Add more paths to prevent the assistant from scanning content-heavy folders, like “node_modules”. Paths are relative to the Workspace root.",
+                    "default": ["node_modules", "build", "dist"],
+                },
+                {
+                    "key": "maxgrafik.AIAssistant.config.permissionReadFiles",
+                    "type": "enum",
+                    "radio": false,
+                    "title": "Read File",
+                    "description": "Allows the assistant to read a file from your Workspace (500 KB limit)",
+                    "values": [[0, "Deny"], [1, "Always ask"], [2, "Allow"]],
+                    "default": 0
+                },
+                {
+                    "key": "maxgrafik.AIAssistant.config.permissionWriteFiles",
+                    "type": "enum",
+                    "radio": false,
+                    "title": "Write File",
+                    "description": "Allows the assistant to write a file to your Workspace. If you choose “Allow”, overwriting a file still has to be confirmed by you. Believe me, you want this!",
+                    "values": [[0, "Deny"], [1, "Always ask"], [2, "Allow"]],
+                    "default": 0
+                }
+            ]
+        },
+        {
+            "key": "maxgrafik.AIAssistant.config.sectionContext",
+            "type": "section",
+            "title": "Context Management",
+            "description": "Choose a strategy to manage context window and token usage",
+            "children": [
+                {
+                    "key": "maxgrafik.AIAssistant.config.contextStrategy",
+                    "type": "enum",
+                    "radio": false,
+                    "title": "Strategy",
+                    "description": "None: Send the entire chat history with every request\nSliding Window: Send only the last ~n messages to stay within token limits",
+                    "values": [[0, "None"], [1, "Sliding Window"]],
+                    "default": 1
+                },
+                {
+                    "key": "maxgrafik.AIAssistant.config.messageLimit",
+                    "type": "number",
+                    "min": 0,
+                    "title": "Message Limit",
+                    "placeholder": "20",
+                    "default": 20
+                }
+            ]
+        }
+    ],
+
+    "configWorkspace": [
+        {
+            "key": "maxgrafik.AIAssistant.workspace.sectionServer",
+            "type": "section",
+            "title": "Server",
+            "children": [
+                {
+                    "key": "maxgrafik.AIAssistant.workspace.serverURL",
+                    "type": "string",
+                    "title": "URL",
+                    "placeholder": "http://127.0.0.1:1337/v1",
+                    "default": null
+                },
+                {
+                    "key": "maxgrafik.AIAssistant.workspace.APIKey",
+                    "type": "string",
+                    "title": "API Key",
+                    "placeholder": "sk-",
+                    "default": null
+                }
+            ]
+        },
+        {
+            "key": "maxgrafik.AIAssistant.workspace.sectionChat",
+            "type": "section",
+            "title": "Chat",
+            "children": [
+                {
+                    "key": "maxgrafik.AIAssistant.workspace.chatWrapWidth",
+                    "type": "number",
+                    "min": 40,
+                    "title": "Wrap Width",
+                    "placeholder": "60",
+                    "default": null
+                },
+                {
+                    "key": "maxgrafik.AIAssistant.workspace.plainText",
+                    "type": "enum",
+                    "radio": false,
+                    "title": "Plain Text",
+                    "values": [[null, "Use global settings"], [true, "Enabled"], [false, "Disabled"]],
+                    "default": null
+                },
+                {
+                    "key": "maxgrafik.AIAssistant.workspace.showLastTurnOnly",
+                    "type": "enum",
+                    "radio": false,
+                    "title": "Show last turn only",
+                    "values": [[null, "Use global settings"], [true, "Enabled"], [false, "Disabled"]],
+                    "default": null
+                },
+                {
+                    "key": "maxgrafik.AIAssistant.workspace.autoSave",
+                    "type": "enum",
+                    "radio": false,
+                    "title": "Auto Save",
+                    "values": [[null, "Use global settings"], [true, "Enabled"], [false, "Disabled"]],
+                    "default": null
+                },
+                {
+                    "key": "maxgrafik.AIAssistant.workspace.autoLoad",
+                    "type": "enum",
+                    "radio": false,
+                    "title": "Auto Load",
+                    "values": [[null, "Use global settings"], [true, "Enabled"], [false, "Disabled"]],
+                    "default": null
+                }
+            ]
+        },
+        {
+            "key": "maxgrafik.AIAssistant.workspace.sectionModel",
+            "type": "section",
+            "title": "Model",
+            "children": [
+                {
+                    "key": "maxgrafik.AIAssistant.workspace.systemPrompt",
+                    "type": "text",
+                    "title": "System Prompt",
+                    "placeholder": "You are an expert software engineer and coding assistant.",
+                    "default": null
+                },
+                {
+                    "key": "maxgrafik.AIAssistant.workspace.maxTokens",
+                    "type": "number",
+                    "min": 0,
+                    "title": "Max Tokens",
+                    "placeholder": "2048",
+                    "default": null
+                },
+                {
+                    "key": "maxgrafik.AIAssistant.workspace.temperature",
+                    "type": "string",
+                    "title": "Temperature",
+                    "placeholder": "0.2",
+                    "default": null
+                },
+                {
+                    "key": "maxgrafik.AIAssistant.workspace.topP",
+                    "type": "string",
+                    "title": "Top-P",
+                    "placeholder": "0.9",
+                    "default": null
+                }
+            ]
+        },
+        {
+            "key": "maxgrafik.AIAssistant.workspace.sectionTools",
+            "type": "section",
+            "title": "Tools",
+            "children": [
+                {
+                    "key": "maxgrafik.AIAssistant.workspace.allowToolUse",
+                    "type": "enum",
+                    "radio": false,
+                    "title": "Allow Tool Use",
+                    "values": [[null, "Use global settings"], [true, "Enabled"], [false, "Disabled"]],
+                    "default": null
+                },
+                {
+                    "key": "maxgrafik.AIAssistant.workspace.permissionListFiles",
+                    "type": "enum",
+                    "radio": false,
+                    "title": "List Files",
+                    "values": [[null, "Use global settings"], [0, "Deny"], [1, "Always ask"], [2, "Allow"]],
+                    "default": null
+                },
+                {
+                    "key": "maxgrafik.AIAssistant.workspace.permissionReadFiles",
+                    "type": "enum",
+                    "radio": false,
+                    "title": "Read File",
+                    "values": [[null, "Use global settings"], [0, "Deny"], [1, "Always ask"], [2, "Allow"]],
+                    "default": null
+                },
+                {
+                    "key": "maxgrafik.AIAssistant.workspace.permissionWriteFiles",
+                    "type": "enum",
+                    "radio": false,
+                    "title": "Write File",
+                    "values": [[null, "Use global settings"], [0, "Deny"], [1, "Always ask"], [2, "Allow"]],
+                    "default": null
+                }
+            ]
+        },
+        {
+            "key": "maxgrafik.AIAssistant.workspace.sectionContext",
+            "type": "section",
+            "title": "Context Management",
+            "children": [
+                {
+                    "key": "maxgrafik.AIAssistant.workspace.contextStrategy",
+                    "type": "enum",
+                    "radio": false,
+                    "title": "Strategy",
+                    "values": [[null, "Use global settings"], [0, "None"], [1, "Sliding Window"]],
+                    "default": null
+                },
+                {
+                    "key": "maxgrafik.AIAssistant.workspace.messageLimit",
+                    "type": "number",
+                    "min": 0,
+                    "title": "Message Limit",
+                    "placeholder": "20",
+                    "default": null
+                }
+            ]
+        }
+    ]
+}
