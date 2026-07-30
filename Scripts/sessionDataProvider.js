@@ -49,28 +49,28 @@ class SessionDataProvider {
 
     getTreeItem(element) {
 
-        let itemName = ""
+        let itemName = "";
 
         switch (element) {
         case "server":
-            itemName = "Server:"
+            itemName = "Server:";
             break;
         case "model":
-            itemName = "Model:"
+            itemName = "Model:";
             break;
         }
 
-        let item = new TreeItem(itemName, TreeItemCollapsibleState.None);
+        const item = new TreeItem(itemName, TreeItemCollapsibleState.None);
 
         switch (element) {
         case "server":
-            item.descriptiveText = this.session.serverURL || this.config.serverURL || "Not configured"
+            item.descriptiveText = this.session.serverURL || this.config.serverURL || "Not configured";
             item.identifier = element;
             item.command = "maxgrafik.AIAssistant.cmd.overrideServerURL";
             item.image = "sidebar-server";
             break;
         case "model":
-            item.descriptiveText = this.session.modelID || "None (Double click to select)"
+            item.descriptiveText = this.session.modelID || "None (Double click to select)";
             item.identifier = element;
             item.command = "maxgrafik.AIAssistant.cmd.selectModel";
             item.image = "sidebar-model";
@@ -83,6 +83,7 @@ class SessionDataProvider {
 
     //! Helper
 
+    // eslint-disable-next-line no-unused-vars
     update(identifier) {
         if (this.treeView) {
 

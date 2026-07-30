@@ -385,7 +385,7 @@ function signalConfigChanges(key) {
     case "plainText":
 
         // Re-wrap all messages
-        emitter.emit("rewrapMessages", config[key]);
+        emitter.emit("rewrapMessages");
         break;
 
     case "showLastTurnOnly":

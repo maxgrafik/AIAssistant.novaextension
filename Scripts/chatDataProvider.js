@@ -82,7 +82,7 @@ class ChatDataProvider {
             this.copyMessage(treeItems);
         });
 
-        emitter.on("rewrapMessages", (treeItems) => {
+        emitter.on("rewrapMessages", () => {
             for (const message of this.session.messages) {
                 if (message.role === "user" || message.role === "assistant") {
                     message.lines = [];
@@ -252,8 +252,8 @@ class ChatDataProvider {
                 try {
                     const args = JSON.parse(toolCall.function.arguments);
                     if (args.path) {
-                        item.descriptiveText = args.path
-                    };
+                        item.descriptiveText = args.path;
+                    }
                 } catch (error) {
                     // noop
                 }
@@ -313,7 +313,7 @@ class ChatDataProvider {
 
             const name = (message.role === "user") ? "You" : "Assistant";
 
-            let item = new TreeItem(name, TreeItemCollapsibleState.Expanded);
+            const item = new TreeItem(name, TreeItemCollapsibleState.Expanded);
             item.identifier = element;
             item.contextValue = (message.content !== null) ? "isMessage" : "";
             item.image = (message.role === "user") ? "sidebar-user" : "sidebar-assistant";
@@ -326,8 +326,8 @@ class ChatDataProvider {
         // element = __pending
 
         if (element === "__pending") {
-            let item = new TreeItem("Assistant", TreeItemCollapsibleState.None);
-            item.descriptiveText = "working …"
+            const item = new TreeItem("Assistant", TreeItemCollapsibleState.None);
+            item.descriptiveText = "working …";
             item.identifier = "__pending";
             item.image = "sidebar-assistant";
             return item;
@@ -341,6 +341,7 @@ class ChatDataProvider {
 
     //! Helper
 
+    // eslint-disable-next-line no-unused-vars
     update(identifier) {
         if (this.treeView) {
 
