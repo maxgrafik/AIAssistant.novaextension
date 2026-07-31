@@ -19,6 +19,8 @@ class Session {
         this.modelID = null;
         this.messages = [];
 
+        this.promptTokens = 0;
+
         this.filePath = null;
         this.createdAt = null;
         this.hasUnsavedChanges = false;
@@ -105,6 +107,13 @@ class Session {
             message.tool_calls === undefined
         ) {
             this.saveChat(/* isAutoSave */ true);
+        }
+    }
+
+    addTokens(promptTokens) {
+        this.promptTokens += promptTokens;
+        if (this.promptTokens > 0) {
+            this.emitter.emit("updateSessionInfoView");
         }
     }
 
@@ -237,6 +246,7 @@ class Session {
         this.modelID = modelID;
         this.filePath = filePath;
         this.createdAt = createdAt;
+
         this.hasUnsavedChanges = true;
 
         if (this.config.autoSave) {
@@ -258,6 +268,8 @@ class Session {
             role: "system",
             content: this.config.systemPrompt,
         });
+
+        this.promptTokens = 0;
 
         this.filePath = null;
         this.createdAt = new Date().toISOString();
@@ -296,6 +308,8 @@ class Session {
                 this.addMessage(message);
             }
 
+            this.promptTokens = chat.promptTokens || 0;
+
             this.filePath = path;
             this.createdAt = chat.createdAt || null;
             this.hasUnsavedChanges = false;
@@ -321,6 +335,7 @@ class Session {
                 modelID: this.modelID,
                 createdAt: this.createdAt,
                 updatedAt: new Date().toISOString(),
+                promptTokens: this.promptTokens,
                 messages: this.messages.map(msg => ({
                     role: msg.role,
                     content: msg.content,
@@ -364,7 +379,7 @@ class Session {
 
             for (const message of this.messages) {
 
-                if (message.role === "user" /* why this? -> && message.content */) {
+                if (message.role === "user") {
 
                     if (addSeparatorForNextTurn) {
                         markdown += "---\n\n";

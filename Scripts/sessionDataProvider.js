@@ -38,10 +38,11 @@ class SessionDataProvider {
 
     getChildren(element) {
         if (element === null) {
-            return [
-                "server",
-                "model",
-            ];
+            const elements = ["server", "model"];
+            if (this.session.promptTokens > 0) {
+                elements.push("tokens");
+            }
+            return elements;
         } else {
             return [];
         }
@@ -57,6 +58,9 @@ class SessionDataProvider {
             break;
         case "model":
             itemName = "Model:";
+            break;
+        case "tokens":
+            itemName = "Usage:";
             break;
         }
 
@@ -74,6 +78,11 @@ class SessionDataProvider {
             item.identifier = element;
             item.command = "maxgrafik.AIAssistant.cmd.selectModel";
             item.image = "sidebar-model";
+            break;
+        case "tokens":
+            item.descriptiveText = `${this.session.promptTokens.toLocaleString()} tokens`;
+            item.identifier = element;
+            item.image = "sidebar-tokens";
             break;
         }
 

@@ -172,6 +172,7 @@ class APIHandler {
                     tools: allowToolUse ? this.toolHandler.toolSchemas : [],
                     tool_choice: allowToolUse ? "auto" : "none",
                     stream: true,
+                    stream_options: { include_usage: true },
                 }),
             });
 
@@ -190,11 +191,20 @@ class APIHandler {
             const chatCompletionChunks = await this.parseResponseBody(response.body);
 
 
-            // Get message content
+            // Get message content and token usage (if included)
 
             let content = "";
+            let promptTokens = 0;
+
             for (const chunk of chatCompletionChunks) {
+
+                // Message
                 content += chunk.choices?.[0]?.delta?.content || "";
+
+                // Token Usage
+                if (chunk.usage) {
+                    promptTokens += chunk.usage.prompt_tokens || 0;
+                }
             }
 
 
@@ -212,6 +222,7 @@ class APIHandler {
             };
 
             this.session.addMessage(assistantMessage);
+            this.session.addTokens(promptTokens);
             this.emitter.emit("removeIntermediateMessage");
 
 

@@ -3,7 +3,7 @@
     "name": "AI Assistant",
     "organization": "Hendrik Meinl",
     "description": "AI Assistant for Nova",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "categories": ["sidebars", "commands"],
     "repository": "https://github.com/maxgrafik/AIAssistant.novaextension",
     "bugs": "https://github.com/maxgrafik/AIAssistant.novaextension/issues",
