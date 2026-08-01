@@ -1,3 +1,8 @@
+## Version 0.2.1
+
+Improved `parseToolCalls` logic in `apiHandler.js`
+
+
 ## Version 0.2.0
 
 Added Token Tracking (if server provides usage data)

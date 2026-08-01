@@ -332,11 +332,11 @@ class APIHandler {
         return out;
     }
 
-    async parseToolCalls(chatCompletion) {
+    async parseToolCalls(chatCompletionChunks) {
 
         const toolCalls = [];
 
-        for (const chunk of chatCompletion) {
+        for (const chunk of chatCompletionChunks) {
 
             const toolCallArray = chunk.choices?.[0]?.delta?.tool_calls;
 
@@ -346,22 +346,25 @@ class APIHandler {
 
             for (const item of toolCallArray) {
 
-                const id   = item.id;
-                const name = item.function.name;
-                const args = item.function.arguments;
+                const { id, function: { name, arguments: args = "" } } = item;
 
                 const toolCall = toolCalls[item.index];
 
                 if (!toolCall) {
-                    toolCalls.push({
-                        index: toolCalls.length,
+
+                    // Use the provided Tool Call index here
+                    // This MAY result in a sparse array, but we clean up on return
+
+                    toolCalls[item.index] = {
+                        index: item.index,
                         id: id,
                         type: "function",
                         function: {
                             name: name,
-                            arguments: args || "",
+                            arguments: args,
                         }
-                    });
+                    };
+
                 } else {
                     id   && (toolCall.id = id);
                     name && (toolCall.function.name = name);
@@ -370,7 +373,9 @@ class APIHandler {
             }
         }
 
-        return toolCalls;
+        // Array.filter() skips empty slots
+
+        return toolCalls.filter(() => true);
     }
 
     handleError(error) {
