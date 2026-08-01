@@ -3,7 +3,7 @@
     "name": "AI Assistant",
     "organization": "Hendrik Meinl",
     "description": "AI Assistant for Nova",
-    "version": "0.2.1",
+    "version": "0.3.0",
     "categories": ["sidebars", "commands"],
     "repository": "https://github.com/maxgrafik/AIAssistant.novaextension",
     "bugs": "https://github.com/maxgrafik/AIAssistant.novaextension/issues",
@@ -62,6 +62,22 @@
                         {
                             "title": "Show/Hide All",
                             "command": "maxgrafik.AIAssistant.cmd.toggleView"
+                        },
+                        {"separator": true},
+                        {
+                            "title": "Show Previous",
+                            "command": "maxgrafik.AIAssistant.cmd.showPreviousTurn",
+                            "when": "maxgrafik.AIAssistant.chat.hasPreviousTurn"
+                        },
+                        {
+                            "title": "Show Next",
+                            "command": "maxgrafik.AIAssistant.cmd.showNextTurn",
+                            "when": "maxgrafik.AIAssistant.chat.hasNextTurn"
+                        },
+                        {
+                            "title": "Show Last",
+                            "command": "maxgrafik.AIAssistant.cmd.showLastTurn",
+                            "when": "!maxgrafik.AIAssistant.chat.isLastTurn"
                         },
                         {"separator": true},
                         {

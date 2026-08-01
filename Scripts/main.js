@@ -5,6 +5,8 @@
  * @copyright 2026 Hendrik Meinl
  */
 
+// What startet as "Hey, let's try this out!" became a massive rabbit hole
+
 const ChatDataProvider = require("chatDataProvider.js");
 const SessionDataProvider = require("sessionDataProvider.js");
 const APIHandler = require("apiHandler.js");
@@ -230,13 +232,8 @@ exports.activate = function() {
         emitter.emit("exportMarkdown");
     });
 
-    nova.commands.register("maxgrafik.AIAssistant.cmd.toggleView", () => {
-        config.showLastTurnOnly = !config.showLastTurnOnly;
-        emitter.emit("toggleView");
-    });
 
-
-    //! Chat view context menu
+    //! Chat View Context Menu (Copy Actions)
 
     nova.commands.register("maxgrafik.AIAssistant.ctx.copyCode", () => {
         emitter.emit("copyCode", chatTreeView.selection);
@@ -244,6 +241,29 @@ exports.activate = function() {
 
     nova.commands.register("maxgrafik.AIAssistant.ctx.copyMessage", () => {
         emitter.emit("copyMessage", chatTreeView.selection);
+    });
+
+
+    //! Chat View Context Menu (View Actions)
+
+    nova.workspace.context.set("maxgrafik.AIAssistant.chat.hasPrevTurn", false);
+    nova.workspace.context.set("maxgrafik.AIAssistant.chat.hasNextTurn", false);
+    nova.workspace.context.set("maxgrafik.AIAssistant.chat.isLastTurn", false);
+
+    nova.commands.register("maxgrafik.AIAssistant.cmd.toggleView", () => {
+        emitter.emit("toggleView");
+    });
+
+    nova.commands.register("maxgrafik.AIAssistant.cmd.showPreviousTurn", () => {
+        emitter.emit("showPreviousTurn");
+    });
+
+    nova.commands.register("maxgrafik.AIAssistant.cmd.showNextTurn", () => {
+        emitter.emit("showNextTurn");
+    });
+
+    nova.commands.register("maxgrafik.AIAssistant.cmd.showLastTurn", () => {
+        emitter.emit("showLastTurn");
     });
 
 
@@ -268,7 +288,9 @@ exports.activate = function() {
         if (session.messages.length === 0) {
 
             // Don't use emitter.emit("newChat") here!
-            // We don't know when the event will fire
+            // We don't know when the event will actually fire
+            // and we need to make sure we have a clean chat
+            // before calling showInputPalette()
 
             session.newChat();
         }
@@ -286,10 +308,14 @@ exports.activate = function() {
 
     nova.commands.register("maxgrafik.AIAssistant.cmd.askAssistantWithSelection", (editor) => {
 
+        // See above
+
         if (!session.modelID) {
             nova.workspace.showErrorMessage("Select a model first");
             return;
         }
+
+        // See above
 
         if (session.messages.length === 0) {
             session.newChat();
@@ -391,7 +417,7 @@ function signalConfigChanges(key) {
     case "showLastTurnOnly":
 
         // Updates chatTreeView
-        emitter.emit("toggleView");
+        emitter.emit("toggleView", config[key]);
         break;
 
     default:

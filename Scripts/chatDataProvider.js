@@ -15,6 +15,8 @@ class ChatDataProvider {
 
         this.session = session;
 
+        this.currentTurnIndex = null;
+        this.showLastTurnOnly = this.config.showLastTurnOnly;
         this.showIntermediateMessage = false;
 
 
@@ -22,26 +24,61 @@ class ChatDataProvider {
 
         emitter.on("addIntermediateMessage", () => {
             this.showIntermediateMessage = true;
+            if (this.showLastTurnOnly) {
+                this.currentTurnIndex = null;
+            }
             this.update("__pending");
         });
 
         emitter.on("removeIntermediateMessage", () => {
             this.showIntermediateMessage = false;
+            if (this.showLastTurnOnly) {
+                this.currentTurnIndex = null;
+            }
             this.update("__pending");
         });
 
-        emitter.on("toggleView", () => {
+        emitter.on("toggleView", (state) => {
+            if (state !== undefined) {
+                this.showLastTurnOnly = state;
+            } else {
+                this.showLastTurnOnly = !this.showLastTurnOnly;
+            }
+            if (!this.showLastTurnOnly) {
+                this.currentTurnIndex = null;
+            }
+            this.update();
+        });
+
+        emitter.on("showNextTurn", () => {
+            this.currentTurnIndex += 1;
+            this.update();
+        });
+
+        emitter.on("showPreviousTurn", () => {
+            this.currentTurnIndex -= 1;
+            this.update();
+        });
+
+        emitter.on("showLastTurn", () => {
+            this.currentTurnIndex = null;
             this.update();
         });
 
         emitter.on("newChat", () => {
             this.session.newChat();
+            this.currentTurnIndex = null;
+            this.showLastTurnOnly = this.config.showLastTurnOnly;
+            this.showIntermediateMessage = false;
             this.update();
         });
 
         emitter.on("openChat", () => {
             this.session.openChat().then((userCancelled) => {
                 if (!userCancelled) {
+                    this.currentTurnIndex = null;
+                    this.showLastTurnOnly = this.config.showLastTurnOnly;
+                    this.showIntermediateMessage = false;
                     this.update();
                 }
             });
@@ -49,6 +86,9 @@ class ChatDataProvider {
 
         emitter.on("clearChat", () => {
             this.session.clearChat();
+            this.currentTurnIndex = null;
+            // this.showLastTurnOnly = this.config.showLastTurnOnly; // <- Probably not
+            this.showIntermediateMessage = false;
             this.update();
         });
 
@@ -59,10 +99,16 @@ class ChatDataProvider {
                 }
                 if (nextEvent === "newChat") {
                     this.session.newChat();
+                    this.currentTurnIndex = null;
+                    this.showLastTurnOnly = this.config.showLastTurnOnly;
+                    this.showIntermediateMessage = false;
                     this.update();
                 } else if (nextEvent === "openChat") {
                     this.session.openChat().then((userCancelled) => {
                         if (!userCancelled) {
+                            this.currentTurnIndex = null;
+                            this.showLastTurnOnly = this.config.showLastTurnOnly;
+                            this.showIntermediateMessage = false;
                             this.update();
                         }
                     });
@@ -133,11 +179,61 @@ class ChatDataProvider {
         // Return message indices
 
         if (element === null) {
-            const messageIDs = this.session.getMessageIDs();
-            if (this.showIntermediateMessage) {
-                messageIDs.push("__pending");
+
+            let children = [];
+
+            const [ messageIDs, userMessageIDs ] = this.session.getMessageIDs();
+
+            if (!this.showLastTurnOnly) {
+                nova.workspace.context.set("maxgrafik.AIAssistant.chat.hasPreviousTurn", false);
+                nova.workspace.context.set("maxgrafik.AIAssistant.chat.hasNextTurn", false);
+                nova.workspace.context.set("maxgrafik.AIAssistant.chat.isLastTurn", false);
+                this.currentTurnIndex = userMessageIDs.length - 1;
+                children = [...messageIDs];
+            } else {
+
+                if (this.currentTurnIndex === null) {
+                    this.currentTurnIndex = userMessageIDs.length - 1;
+                    nova.workspace.context.set("maxgrafik.AIAssistant.chat.hasNextTurn", false);
+                    nova.workspace.context.set("maxgrafik.AIAssistant.chat.isLastTurn", true);
+                }
+
+                if (this.currentTurnIndex >= userMessageIDs.length - 1) {
+                    this.currentTurnIndex = userMessageIDs.length - 1;
+                    nova.workspace.context.set("maxgrafik.AIAssistant.chat.hasNextTurn", false);
+                    nova.workspace.context.set("maxgrafik.AIAssistant.chat.isLastTurn", true);
+                } else if (this.currentTurnIndex < userMessageIDs.length - 1) {
+                    nova.workspace.context.set("maxgrafik.AIAssistant.chat.hasNextTurn", true);
+                    nova.workspace.context.set("maxgrafik.AIAssistant.chat.isLastTurn", false);
+                }
+
+                if (this.currentTurnIndex <= 0) {
+                    this.currentTurnIndex = 0;
+                    nova.workspace.context.set("maxgrafik.AIAssistant.chat.hasPreviousTurn", false);
+                } else if (this.currentTurnIndex > 0) {
+                    nova.workspace.context.set("maxgrafik.AIAssistant.chat.hasPreviousTurn", true);
+                }
+
+                // We set currentTurnIndex above, so it is a valid index here
+
+                const userMessageIDForCurrentTurn = userMessageIDs[this.currentTurnIndex];
+                const userMessageIDForNextTurn = userMessageIDs[this.currentTurnIndex+1];
+
+                const start = messageIDs.findIndex(id => id === userMessageIDForCurrentTurn);
+
+                let end = messageIDs.length;
+                if (userMessageIDForNextTurn !== undefined) {
+                    end = messageIDs.findIndex(id => id === userMessageIDForNextTurn);
+                }
+
+                children = [...messageIDs.slice(start, end)];
             }
-            return messageIDs;
+
+            if (this.showIntermediateMessage) {
+                children.push("__pending");
+            }
+
+            return children;
         }
 
 

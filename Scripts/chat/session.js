@@ -50,8 +50,8 @@ class Session {
 
     getMessageIDs() {
 
-        let lastUserMessageIndex;
         const messageIDs = [];
+        const userMessageIDs = [];
 
         for (let i = 0; i < this.messages.length; i++) {
 
@@ -62,15 +62,11 @@ class Session {
             }
 
             if (role === "user") {
-                lastUserMessageIndex = i;
+                userMessageIDs.push(i);
             }
         }
 
-        if (this.config.showLastTurnOnly && lastUserMessageIndex) {
-            return messageIDs.filter(id => id >= lastUserMessageIndex);
-        } else {
-            return messageIDs;
-        }
+        return [messageIDs, userMessageIDs];
     }
 
     addMessage(message) {
