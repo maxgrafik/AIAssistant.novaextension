@@ -1,6 +1,7 @@
 ## Version 0.2.1
 
-Improved `parseToolCalls` logic in `apiHandler.js`
+- Improved `parseToolCalls` logic in `apiHandler.js`
+- Improved tool logic and argument validation
 
 
 ## Version 0.2.0

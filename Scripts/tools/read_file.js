@@ -42,7 +42,7 @@ class ReadFileTool extends Tool {
         // 1. Check permission
 
         if (!this.config.allowToolUse || this.config.permissionReadFiles === 0) {
-            throw new ToolError("rejected", "The use of `read_file` is blocked by configured policy");
+            throw new ToolError("rejected", 'The use of "read_file" is blocked by configured policy');
         }
 
         // 2. Parse arguments
@@ -59,16 +59,13 @@ class ReadFileTool extends Tool {
         if (this.config.permissionReadFiles === 1) {
             const permission = await this.getPermission(`The assistant wants to read the following file:\n${args.path}`);
             if (!permission) {
-                throw new ToolError("user_denied", "The user denied permission for using `read_file`");
+                throw new ToolError("user_denied", `The user did not give permission to read the file "${args.path}"`);
             }
         }
 
         // 4. Check arguments
 
-        const check = this.checkArguments(args, ["path"]);
-        if (!check) {
-            throw new ToolError("invalid_args", "Required argument missing for `read_file`");
-        }
+        this.checkArguments(this.schema, args);
 
         // 5. Sanitize path and run some checks
 
@@ -77,14 +74,14 @@ class ReadFileTool extends Tool {
         // Check if it exists in workspace
 
         if (!nova.workspace.contains(sanitizedPath)) {
-            throw new ToolError("execution_error", "The file does not exist in the user's current workspace");
+            throw new ToolError("rejected", "The file does not exist in the user's current workspace");
         }
 
         // Check if it's a file
 
         const fileStats = nova.fs.stat(sanitizedPath);
         if (!fileStats.isFile()) {
-            throw new ToolError("execution_error", "The provided `path` does not point to a file");
+            throw new ToolError("rejected", 'The provided "path" is not a file');
         }
 
         // Check if the file is readable
@@ -122,7 +119,7 @@ class ReadFileTool extends Tool {
             return successEnvelope;
 
         } catch (error) {
-            throw new ToolError("execution_error", `Reading file failed with error "${error.message}"`);
+            throw new ToolError("execution_error", `Tool failed with error "${error.message}"`);
         }
     }
 }

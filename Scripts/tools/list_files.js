@@ -47,7 +47,7 @@ class ListFilesTool extends Tool {
         // 1. Check permission
 
         if (!this.config.allowToolUse || this.config.permissionListFiles === 0) {
-            throw new ToolError("rejected", "The use of `list_files` is blocked by configured policy");
+            throw new ToolError("rejected", 'The use of "list_files" is blocked by configured policy');
         }
 
         // 2. Parse arguments
@@ -64,16 +64,13 @@ class ListFilesTool extends Tool {
         if (this.config.permissionListFiles === 1) {
             const permission = await this.getPermission(`The assistant wants to see the contents of the following folder:\n${args.path}`);
             if (!permission) {
-                throw new ToolError("user_denied", "The user denied permission for using `list_files`");
+                throw new ToolError("user_denied", `The user did not give permission to list the contents of "${args.path}"`);
             }
         }
 
         // 4. Check arguments
 
-        const check = this.checkArguments(args, ["path", "includeSubdirectories"]);
-        if (!check) {
-            throw new ToolError("invalid_args", "Required argument missing for `list_files`");
-        }
+        this.checkArguments(this.schema, args);
 
         // 5. Sanitize path and run some checks
 
@@ -82,14 +79,14 @@ class ListFilesTool extends Tool {
         // Check if it exists in workspace
 
         if (!nova.workspace.contains(sanitizedPath)) {
-            throw new ToolError("execution_error", "The directory does not exist in the user's current workspace");
+            throw new ToolError("rejected", "The directory does not exist in the user's current workspace");
         }
 
         // Check if it's a directory
 
         const fileStats = nova.fs.stat(sanitizedPath);
         if (!fileStats.isDirectory()) {
-            throw new ToolError("execution_error", "The provided `path` does not point to a directory");
+            throw new ToolError("rejected", 'The provided "path" is not a directory');
         }
 
         // 6. Finally do, what this tool is supposed to do: list files in the directory

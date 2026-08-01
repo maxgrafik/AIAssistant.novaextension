@@ -46,7 +46,7 @@ class WriteFileTool extends Tool {
         // 1. Check permission
 
         if (!this.config.allowToolUse || this.config.permissionWriteFiles === 0) {
-            throw new ToolError("rejected", "The use of `write_file` is blocked by configured policy");
+            throw new ToolError("rejected", 'The use of "write_file" is blocked by configured policy');
         }
 
         // 2. Parse arguments
@@ -63,16 +63,13 @@ class WriteFileTool extends Tool {
         if (this.config.permissionWriteFiles === 1) {
             const permission = await this.getPermission(`The assistant wants to write to the following file:\n${args.path}`);
             if (!permission) {
-                throw new ToolError("user_denied", "The user denied permission for using `write_file`");
+                throw new ToolError("user_denied", `The user did not give permission to write the file "${args.path}"`);
             }
         }
 
         // 4. Check arguments
 
-        const check = this.checkArguments(args, ["path", "content"]);
-        if (!check) {
-            throw new ToolError("invalid_args", "Required argument missing for `write_file`");
-        }
+        this.checkArguments(this.schema, args);
 
         // 5. Sanitize path and run some checks
 
@@ -82,7 +79,7 @@ class WriteFileTool extends Tool {
 
         const fileStats = nova.fs.stat(sanitizedPath);
         if (fileStats?.isDirectory()) {
-            throw new ToolError("rejected", "The provided `path` points to a folder");
+            throw new ToolError("rejected", 'The provided "path" is a folder');
         }
 
         // 7. Review, if allowed but is overwrite
@@ -91,7 +88,7 @@ class WriteFileTool extends Tool {
         if (this.config.permissionWriteFiles === 2 && fileStats?.isFile()) {
             const permission = await this.getPermission(`The assistant wants to overwrite the following file:\n${args.path}`);
             if (!permission) {
-                throw new ToolError("user_denied", "The user denied permission to overwrite the file");
+                throw new ToolError("user_denied", `The user did not give permission to overwrite the file "${args.path}"`);
             }
         }
 
@@ -156,7 +153,7 @@ class WriteFileTool extends Tool {
             return successEnvelope;
 
         } catch (error) {
-            throw new ToolError("execution_error", `Writing to file failed with error "${error.message}"`);
+            throw new ToolError("execution_error", `Tool failed with error "${error.message}"`);
         }
     }
 }
