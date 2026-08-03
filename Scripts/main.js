@@ -18,6 +18,7 @@ const config = {
     chatWrapWidth: 60,
     plainText: true,
     showLastTurnOnly: true,
+    showStream: false,
     autoSave: false,
     autoLoad: false,
     systemPrompt: "",
@@ -67,24 +68,12 @@ exports.activate = function() {
 
     //! Create Chat TreeView
 
-    const chatDataProvider = new ChatDataProvider(config, emitter, session);
-    const chatTreeView = new TreeView("assistant-chat", {
-        dataProvider: chatDataProvider
-    });
-    chatDataProvider.treeView = chatTreeView;
-
-    nova.subscriptions.add(chatTreeView);
+    new ChatDataProvider(config, emitter, session);
 
 
     //! Create Session Info TreeView
 
-    const sessionDataProvider = new SessionDataProvider(config, emitter, session);
-    const sessionTreeView = new TreeView("assistant-session", {
-        dataProvider: sessionDataProvider
-    });
-    sessionDataProvider.treeView = sessionTreeView;
-
-    nova.subscriptions.add(sessionTreeView);
+    new SessionDataProvider(config, emitter, session);
 
 
     //! API Handler
@@ -99,9 +88,7 @@ exports.activate = function() {
             "Enter URL to override server for this session",
             {value: session.serverURL || config.serverURL, placeholder: session.serverURL || config.serverURL},
             (serverURL) => {
-                if (serverURL) {
-                    emitter.emit("updateServer", serverURL);
-                }
+                emitter.emit("updateServer", serverURL);
             }
         );
     });
@@ -113,9 +100,7 @@ exports.activate = function() {
                     models,
                     {placeholder: "Select a model"},
                     (modelID) => {
-                        if (modelID) {
-                            emitter.emit("updateModel", modelID);
-                        }
+                        emitter.emit("updateModel", modelID);
                     }
                 );
             } else if (models && models.length === 0) {
@@ -236,11 +221,11 @@ exports.activate = function() {
     //! Chat View Context Menu (Copy Actions)
 
     nova.commands.register("maxgrafik.AIAssistant.ctx.copyCode", () => {
-        emitter.emit("copyCode", chatTreeView.selection);
+        emitter.emit("copyCode");
     });
 
     nova.commands.register("maxgrafik.AIAssistant.ctx.copyMessage", () => {
-        emitter.emit("copyMessage", chatTreeView.selection);
+        emitter.emit("copyMessage");
     });
 
 
@@ -248,7 +233,7 @@ exports.activate = function() {
 
     nova.workspace.context.set("maxgrafik.AIAssistant.chat.hasPrevTurn", false);
     nova.workspace.context.set("maxgrafik.AIAssistant.chat.hasNextTurn", false);
-    nova.workspace.context.set("maxgrafik.AIAssistant.chat.isLastTurn", false);
+    nova.workspace.context.set("maxgrafik.AIAssistant.chat.isLastTurn", true);
 
     nova.commands.register("maxgrafik.AIAssistant.cmd.toggleView", () => {
         emitter.emit("toggleView");
@@ -326,6 +311,10 @@ exports.activate = function() {
             {placeholder: "Ask Assistant"},
             (prompt) => {
                 if (prompt) {
+
+                    // Code Placement
+                    // Some sources say, it's better to prepend the code.
+                    // If you ask an LLM what if prefers, it says append.
 
                     const language = editor.document.syntax || "text";
                     const selection = editor.selectedText

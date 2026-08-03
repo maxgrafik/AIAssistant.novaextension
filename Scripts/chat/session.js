@@ -26,7 +26,6 @@ class Session {
         this.hasUnsavedChanges = false;
 
         this.hasAutoSaveFailed = false;
-        this.toolCallFails = new Map();
     }
 
     getMessages() {
@@ -38,35 +37,6 @@ class Session {
                 ...(msg.tool_call_id ? { tool_call_id: msg.tool_call_id } : {}),
             };
         });
-    }
-
-    getMessage(id) {
-        try {
-            return this.messages[id];
-        } catch (error) {
-            return null;
-        }
-    }
-
-    getMessageIDs() {
-
-        const messageIDs = [];
-        const userMessageIDs = [];
-
-        for (let i = 0; i < this.messages.length; i++) {
-
-            const role = this.messages[i].role;
-
-            if (role === "user" || role === "assistant") {
-                messageIDs.push(i);
-            }
-
-            if (role === "user") {
-                userMessageIDs.push(i);
-            }
-        }
-
-        return [messageIDs, userMessageIDs];
     }
 
     addMessage(message) {
@@ -85,12 +55,14 @@ class Session {
             message.role === "tool" &&
             /"ok"\s*:\s*false/.test(message.content)
         ) {
-            const content = JSON.parse(message.content);
-            if (!content.ok){
-                this.toolCallFails.set(message.tool_call_id, {
-                    kind: content.kind,
-                    error: content.error,
-                });
+            for(const msg of this.messages) {
+
+                const uiToolCall = msg.UIContent.find(item => item.id === message.tool_call_id);
+
+                if (uiToolCall) {
+                    uiToolCall.setFailed(message.content);
+                    break;
+                }
             }
         }
 
@@ -103,13 +75,6 @@ class Session {
             message.tool_calls === undefined
         ) {
             this.saveChat(/* isAutoSave */ true);
-        }
-    }
-
-    addTokens(promptTokens) {
-        this.promptTokens += promptTokens;
-        if (this.promptTokens > 0) {
-            this.emitter.emit("updateSessionInfoView");
         }
     }
 
@@ -131,11 +96,21 @@ class Session {
     //! Model update
 
     updateModel(modelID) {
-        this.modelID = modelID;
+        if (modelID) {
+            this.modelID = modelID;
+        } else {
+            this.modelID = null;
+        }
         this.hasUnsavedChanges = true;
         if (this.config.autoSave) {
             this.saveChat(/* isAutoSave */ true);
         }
+    }
+
+    //! Token update
+
+    updateTokens(promptTokens) {
+        this.promptTokens += promptTokens;
     }
 
 
@@ -254,8 +229,6 @@ class Session {
 
     newChat() {
 
-        this.toolCallFails.clear();
-
         this.ID = `Nova.${nova.crypto.randomUUID()}`;
         this.serverURL = null;
         // this.modelID = null; // <- Maybe we should preserve the modelID
@@ -293,8 +266,6 @@ class Session {
             ) {
                 throw new Error("Wrong chat format");
             }
-
-            this.toolCallFails.clear();
 
             this.ID = chat.sessionID || `Nova.${nova.crypto.randomUUID()}`;
             this.serverURL = chat.serverURL || null;
@@ -400,12 +371,11 @@ class Session {
 
                             markdown += "```\n";
                             markdown += `Tool Call: ${toolCall.function.name}\n`;
+                            markdown += `Arguments: ${toolCall.function.arguments}\n`;
 
-                            if (this.toolCallFails.has(toolCall.id)) {
-                                const toolCallFail = this.toolCallFails.get(toolCall.id);
-                                markdown += `[${toolCallFail.kind}] ${toolCallFail.error}\n`;
-                            } else {
-                                markdown += `Arguments: ${toolCall.function.arguments}\n`;
+                            const uiToolCall = message.UIContent.find(item => item.id === toolCall.id);
+                            if (uiToolCall && !uiToolCall.ok) {
+                                markdown += `\n[${uiToolCall.kind}] ${uiToolCall.error}\n`;
                             }
 
                             markdown += "```\n\n";

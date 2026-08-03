@@ -5,6 +5,10 @@
  * @copyright 2026 Hendrik Meinl
  */
 
+const UITextLine = require("textline.js");
+const UICodeBlock = require("codeblock.js");
+const UIToolCall = require("toolcall.js");
+
 class Message {
 
     constructor(config, message) {
@@ -16,43 +20,33 @@ class Message {
         this.tool_calls = message.tool_calls || [];
         this.tool_call_id = message.tool_call_id || null;
 
-        this.lines = [];
-        this.codeBlocks = [];
+        this.UIContent = [];
 
         if (this.role === "user" || this.role === "assistant") {
-            this.wrapContent(this.content);
+            this.UIContent = this.wrapContent();
+        }
+
+        if (this.role === "assistant" && message.tool_calls) {
+            for (const toolCall of message.tool_calls) {
+                this.UIContent.push(new UIToolCall(toolCall));
+            }
         }
     }
 
-    getLine(id) {
-        try {
-            return this.lines[id];
-        } catch (error) {
-            return null;
+    wrapContent() {
+
+        if (!this.content) {
+            return [];
         }
-    }
 
-    getLineIDs() {
-        return this.lines.map((_, i) => i);
-    }
-
-    wrapContent(content) {
-
-        if (!content) {
-            return;
-        }
+        const lines = [];
+        const codeBlocks = [];
 
         // Extract fenced code blocks
 
-        content = content.replace(/```[\s\S]*?```/g, (match) => {
-            const lines = match.split("\n");
-            const language = lines[0].replace("```", "").trim();
-            const code = lines.slice(1, -1).join("\n").trim();
-            this.codeBlocks.push({
-                language: language,
-                code: code.split("\n"),
-            });
-            return `~~CODEBLOCK~${this.codeBlocks.length-1}~~`;
+        let content = this.content.replace(/```[\s\S]*?```/g, (match) => {
+            codeBlocks.push(new UICodeBlock(match));
+            return `~~CODEBLOCK~${codeBlocks.length-1}~~`;
         });
 
 
@@ -65,46 +59,56 @@ class Message {
                 .replace(/__([^_]+)__/g, "$1")
                 // .replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g, (m, p1, p2) => `${p1}${p2}`)
                 // .replace(/(^|[^_])_([^_\n]+)_(?!_)/g, (m, p1, p2) => `${p1}${p2}`) // <- removes too much
+                .replace(/\$([^$\n]+)\$/g, "⌈$1⌋") // <- Markdown Math Notation $...$
                 .replace(/`([^`\n]+)`/g, "⌈$1⌋")
                 .replace(/\\([\\`*_{}[\]()#+\-.!])/g, "$1")
-                .replace(/^(\s*)\*/gm, "$1•");
+                .replace(/^(\s*)\*\s/gm, "$1▪ ")
+                .replace(/^(\s*)-\s/gm, "$1▪ ");
         }
-
-
-        // Set "__code index" markers
-
-        content = content.replace(/[ \t]*~~CODEBLOCK~(\d+)~~[ \t]*/g, (_, i) => `__code ${i}`);
 
 
         // Wrap text
 
-        const paragraphs = content.trim().split("\n");
-        for (const p of paragraphs) {
+        content.split(/\r?\n/).forEach(paragraph => {
 
-            if (p.length === 0) {
-                this.lines.push("");
-                continue;
+            const paragraphText = paragraph.trim();
+
+            if (!paragraphText) {
+                return lines.push(new UITextLine(""));
             }
 
-            let remaining = p;
+            const match = /~~CODEBLOCK~(\d+)~~/.exec(paragraphText);
+            if (match) {
+                return lines.push(codeBlocks[match[1]]);
+            }
 
-            while (remaining.length > this.config.chatWrapWidth) {
+            const leading = paragraph.match(/^\s+/)?.[0] || "";
+            const ordinal = paragraphText.match(/^\d+\.\s/) ? "    " : "";
+            const bullet = paragraphText.startsWith("▪") ? "    " : "";
 
-                let breakAt = remaining.lastIndexOf(" ", this.config.chatWrapWidth);
+            let currentLine = leading;
+            let currentLineLength = currentLine.length;
 
-                if (breakAt <= 0) {
-                    breakAt = this.config.chatWrapWidth;
+            const words = paragraphText.split(/\s+/);
+            words.forEach(word => {
+
+                const wordLength = word.length;
+                const combinedLength = currentLineLength + wordLength;
+
+                if (combinedLength <= this.config.chatWrapWidth) {
+                    currentLine += word + " ";
+                    currentLineLength = combinedLength + 1;
+                } else {
+                    lines.push(new UITextLine(currentLine.trimEnd()));
+                    currentLine = leading + ordinal + bullet + word + " ";
+                    currentLineLength = currentLine.length;
                 }
+            });
 
-                this.lines.push(remaining.substring(0, breakAt));
+            lines.push(new UITextLine(currentLine));
+        });
 
-                remaining = remaining.substring(breakAt).trimStart();
-            }
-
-            if (remaining) {
-                this.lines.push(remaining);
-            }
-        }
+        return lines;
     }
 }
 

@@ -5,30 +5,60 @@
  * @copyright 2026 Hendrik Meinl
  */
 
+const UISessionInfo = require("chat/sessioninfo.js");
+
 class SessionDataProvider {
 
     constructor(config, emitter, session) {
 
         this.config = config;
         this.emitter = emitter;
-        this.treeView = null;
+
+
+        //! Session
 
         this.session = session;
+
+
+        //! Info
+
+        this.serverInfo = new UISessionInfo("server", this.config.serverURL);
+        this.modelInfo = new UISessionInfo("model", null);
+        this.tokenInfo = new UISessionInfo("tokens", 0);
+
+
+        //! TreeView
+
+        this.treeView = new TreeView("maxgrafik.AIAssistant.sidebar.session", {
+            dataProvider: this
+        });
+        nova.subscriptions.add(this.treeView);
 
 
         //! Events
 
         emitter.on("updateServer", (serverURL) => {
             this.session.updateServer(serverURL);
-            this.update("server");
+            this.serverInfo.value = this.session.serverURL || this.config.serverURL;
+            this.update(this.serverInfo);
         });
 
         emitter.on("updateModel", (modelID) => {
             this.session.updateModel(modelID);
-            this.update("model");
+            this.modelInfo.value = this.session.modelID;
+            this.update(this.modelInfo);
+        });
+
+        emitter.on("updateTokens", (tokens) => {
+            this.session.updateTokens(tokens);
+            this.tokenInfo.value = this.session.promptTokens;
+            this.update(this.tokenInfo);
         });
 
         emitter.on("updateSessionInfoView", () => {
+            this.serverInfo.value = this.session.serverURL || this.config.serverURL;
+            this.modelInfo.value = this.session.modelID;
+            this.tokenInfo.value = this.session.promptTokens;
             this.update();
         });
     }
@@ -38,11 +68,11 @@ class SessionDataProvider {
 
     getChildren(element) {
         if (element === null) {
-            const elements = ["server", "model"];
-            if (this.session.promptTokens > 0) {
-                elements.push("tokens");
-            }
-            return elements;
+            return [
+                this.serverInfo,
+                this.modelInfo,
+                this.tokenInfo
+            ];
         } else {
             return [];
         }
@@ -52,7 +82,7 @@ class SessionDataProvider {
 
         let itemName = "";
 
-        switch (element) {
+        switch (element.identifier) {
         case "server":
             itemName = "Server:";
             break;
@@ -66,22 +96,19 @@ class SessionDataProvider {
 
         const item = new TreeItem(itemName, TreeItemCollapsibleState.None);
 
-        switch (element) {
+        switch (element.identifier) {
         case "server":
-            item.descriptiveText = this.session.serverURL || this.config.serverURL || "Not configured";
-            item.identifier = element;
+            item.descriptiveText = element.value || "Not configured";
             item.command = "maxgrafik.AIAssistant.cmd.overrideServerURL";
             item.image = "sidebar-server";
             break;
         case "model":
-            item.descriptiveText = this.session.modelID || "None (Double click to select)";
-            item.identifier = element;
+            item.descriptiveText = element.value || "None (Double click to select)";
             item.command = "maxgrafik.AIAssistant.cmd.selectModel";
             item.image = "sidebar-model";
             break;
         case "tokens":
-            item.descriptiveText = `${this.session.promptTokens.toLocaleString()} tokens`;
-            item.identifier = element;
+            item.descriptiveText = `${element.value.toLocaleString()} tokens`;
             item.image = "sidebar-tokens";
             break;
         }
@@ -92,14 +119,9 @@ class SessionDataProvider {
 
     //! Helper
 
-    // eslint-disable-next-line no-unused-vars
-    update(identifier) {
+    update(element) {
         if (this.treeView) {
-
-            // TreeView.reload([element]) seems to be broken in Nova
-            // so we unfortunately need to reload the whole tree
-
-            this.treeView.reload();
+            this.treeView.reload(element);
         }
     }
 }

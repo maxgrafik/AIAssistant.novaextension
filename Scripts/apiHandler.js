@@ -222,8 +222,8 @@ class APIHandler {
             };
 
             this.session.addMessage(assistantMessage);
-            this.session.addTokens(promptTokens);
             this.emitter.emit("removeIntermediateMessage");
+            this.emitter.emit("updateTokens", promptTokens);
 
 
             // Dispatch tool calls
@@ -307,7 +307,16 @@ class APIHandler {
                             return out;
                         }
 
-                        out.push(JSON.parse(payload));
+                        try {
+
+                            const chunk = JSON.parse(payload);
+
+                            out.push(chunk);
+                            this.emitter.emit("updateIntermediateMessage", chunk);
+
+                        } catch (error) {
+                            // noop
+                        }
                     }
 
                     continue;

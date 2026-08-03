@@ -3,7 +3,7 @@
     "name": "AI Assistant",
     "organization": "Hendrik Meinl",
     "description": "AI Assistant for Nova",
-    "version": "0.3.0",
+    "version": "0.4.0",
     "categories": ["sidebars", "commands"],
     "repository": "https://github.com/maxgrafik/AIAssistant.novaextension",
     "bugs": "https://github.com/maxgrafik/AIAssistant.novaextension/issues",
@@ -22,13 +22,13 @@
 
     "sidebars": [
         {
-            "id": "assistant",
+            "id": "maxgrafik.AIAssistant.sidebar",
             "name": "Assistant",
             "smallImage": "assistant-small",
             "largeImage": "assistant-large",
             "sections": [
                 {
-                    "id": "assistant-chat",
+                    "id": "maxgrafik.AIAssistant.sidebar.chat",
                     "name": "Chat",
                     "allowMultiple": false,
                     "placeholderImage": "assistant-large",
@@ -67,7 +67,7 @@
                         {
                             "title": "Show Previous",
                             "command": "maxgrafik.AIAssistant.cmd.showPreviousTurn",
-                            "when": "maxgrafik.AIAssistant.chat.hasPreviousTurn"
+                            "when": "maxgrafik.AIAssistant.chat.hasPrevTurn"
                         },
                         {
                             "title": "Show Next",
@@ -106,7 +106,7 @@
                     ]
                 },
                 {
-                    "id": "assistant-session",
+                    "id": "maxgrafik.AIAssistant.sidebar.session",
                     "name": "Info",
                     "allowMultiple": false,
                     "headerCommands": [
@@ -214,6 +214,13 @@
                     "title": "Show last turn only",
                     "description": "This will only show your last prompt and the assistant’s answer (preserves context without cluttering the sidebar)",
                     "default": true
+                },
+                {
+                    "key": "maxgrafik.AIAssistant.config.showStream",
+                    "type": "boolean",
+                    "title": "Stream Response",
+                    "description": "[Experimental] This streams the assistant’s response. Only useful in combination with “Show last turn only”. May cause severe flickering and scrolling issues. If your AI is extremely chatty, you may want to leave this off.",
+                    "default": false
                 },
                 {
                     "key": "maxgrafik.AIAssistant.config.autoSave",
@@ -391,6 +398,14 @@
                     "type": "enum",
                     "radio": false,
                     "title": "Show last turn only",
+                    "values": [[null, "Use global settings"], [true, "Enabled"], [false, "Disabled"]],
+                    "default": null
+                },
+                {
+                    "key": "maxgrafik.AIAssistant.workspace.showStream",
+                    "type": "enum",
+                    "radio": false,
+                    "title": "Stream Response",
                     "values": [[null, "Use global settings"], [true, "Enabled"], [false, "Disabled"]],
                     "default": null
                 },
