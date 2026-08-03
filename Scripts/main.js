@@ -312,20 +312,16 @@ exports.activate = function() {
             (prompt) => {
                 if (prompt) {
 
-                    // Code Placement
-                    // Some sources say, it's better to prepend the code.
-                    // If you ask an LLM what if prefers, it says append.
-
                     const language = editor.document.syntax || "text";
                     const selection = editor.selectedText
                         .split(editor.document.eol)
                         .join("\n");
 
                     let promptWithSelection = "";
-                    promptWithSelection += prompt + "\n\n";
                     promptWithSelection += "```" + language + "\n";
                     promptWithSelection += selection + "\n";
-                    promptWithSelection += "```";
+                    promptWithSelection += "```\n";
+                    promptWithSelection += prompt;
 
                     apiHandler.sendMessage(promptWithSelection);
                 }

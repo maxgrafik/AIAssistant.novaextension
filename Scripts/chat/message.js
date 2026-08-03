@@ -69,6 +69,10 @@ class Message {
 
         // Wrap text
 
+        const regexLeading = /^\s+/;
+        const regexOrdinal = /^\d+\.\s/;
+        const regexCodeBlock = /~~CODEBLOCK~(\d+)~~/;
+
         content.split(/\r?\n/).forEach(paragraph => {
 
             const paragraphText = paragraph.trim();
@@ -77,14 +81,15 @@ class Message {
                 return lines.push(new UITextLine(""));
             }
 
-            const match = /~~CODEBLOCK~(\d+)~~/.exec(paragraphText);
+            const match = regexCodeBlock.exec(paragraphText);
             if (match) {
                 return lines.push(codeBlocks[match[1]]);
             }
 
-            const leading = paragraph.match(/^\s+/)?.[0] || "";
-            const ordinal = paragraphText.match(/^\d+\.\s/) ? "    " : "";
+            const leading = regexLeading.exec(paragraph)?.[0] || "";
+            const ordinal = regexOrdinal.exec(paragraphText) ? "    " : "";
             const bullet = paragraphText.startsWith("▪") ? "    " : "";
+            const prefix = leading + ordinal + bullet;
 
             let currentLine = leading;
             let currentLineLength = currentLine.length;
@@ -100,7 +105,7 @@ class Message {
                     currentLineLength = combinedLength + 1;
                 } else {
                     lines.push(new UITextLine(currentLine.trimEnd()));
-                    currentLine = leading + ordinal + bullet + word + " ";
+                    currentLine = prefix + word + " ";
                     currentLineLength = currentLine.length;
                 }
             });

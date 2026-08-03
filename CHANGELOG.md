@@ -1,3 +1,8 @@
+## Version 0.4.1
+
+Minor performance tweaks
+
+
 ## Version 0.4.0
 
 - Refactored code for `chatDataProvider`/`sessionDataProvider`

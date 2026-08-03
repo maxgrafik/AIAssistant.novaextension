@@ -27,7 +27,6 @@ class ChatDataProvider {
 
         this.intermediateMessage = null;
         this.updateTimer = null;
-        this.updatePending = false;
 
 
         //! TreeView
@@ -93,14 +92,10 @@ class ChatDataProvider {
 
             // Only the last line changed
 
-            if (newLines.length - 1 === i) {
+            if (newLines.length === currentLines.length) {
                 const newLine = newLines[i];
                 const curLine = currentLines[i];
-                if (
-                    newLine &&
-                    typeof newLine.text !== "undefined" &&
-                    newLine.text !== curLine.text
-                ) {
+                if (newLine?.text !== undefined && newLine.text !== curLine.text) {
                     curLine.text = newLine.text;
                     this.scheduleUpdate(curLine);
                 }
@@ -124,13 +119,7 @@ class ChatDataProvider {
                 diffIndex = searchEnd + 1;
             }
 
-            if (diffIndex <= i) {
-                currentLines.length = diffIndex;
-            }
-
-            for (let k = diffIndex; k < newLines.length; k++) {
-                currentLines.push(newLines[k]);
-            }
+            currentLines.splice(diffIndex, currentLines.length - diffIndex,...newLines.slice(diffIndex));
 
             this.scheduleUpdate(this.intermediateMessage);
         });
@@ -235,7 +224,7 @@ class ChatDataProvider {
 
         const element = selection[0];
         const elementType = element.constructor.name;
-        if (elementType === "CodeBlock") {
+        if (elementType === "UICodeBlock") {
             nova.clipboard.writeText(element.code.join("\n"));
         }
     }
@@ -407,12 +396,9 @@ class ChatDataProvider {
         this.showLastTurnOnly = this.config.showLastTurnOnly;
         this.intermediateMessage = null;
         this.updateTimer = null;
-        this.updatePending = false;
     }
 
     scheduleUpdate(element) {
-
-        this.updatePending = true;
 
         if (this.updateTimer) {
             return;
@@ -420,14 +406,8 @@ class ChatDataProvider {
 
         this.updateTimer = setTimeout(() => {
 
-            this.updateTimer = null;
-
-            if (!this.updatePending) {
-                return;
-            }
-
-            this.updatePending = false;
             this.update(element);
+            this.updateTimer = null;
 
         }, 60);
     }
