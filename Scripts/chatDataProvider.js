@@ -44,7 +44,7 @@ class ChatDataProvider {
 
             this.intermediateMessage = new Message(
                 this.config,
-                { role: "IntermediateMessage", content: "" }
+                { role: "IntermediateMessage", content: " " }
             );
 
             if (this.showLastTurnOnly) {
