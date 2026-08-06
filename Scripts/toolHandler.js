@@ -5,6 +5,7 @@
  * @copyright 2026 Hendrik Meinl
  */
 
+const MCPAdapter = require("mcpAdapter.js");
 const ToolError = require("toolError.js");
 
 class ToolHandler {
@@ -17,12 +18,14 @@ class ToolHandler {
         this.tools = new Map();
         this.toolSchemas = null;
 
+        this.mcpAdapter = null;
+
         this.loadTools();
     }
 
-    loadTools() {
+    async loadTools() {
 
-        // Get files from "[extension]/Scripts/tools"
+        //! Our own Tools in "[extension]/Scripts/tools"
 
         const extensionPath = nova.extension.path;
         const toolsPath = nova.path.join(extensionPath, "Scripts", "tools");
@@ -47,6 +50,21 @@ class ToolHandler {
         }
 
         this.toolSchemas = [...this.tools.values()].map(tool => tool.schema);
+
+
+        //! MCP Tools
+
+        if (this.config.mcpConfigPath) {
+
+            const mcpAdapter = new MCPAdapter();
+
+            await mcpAdapter.loadConfig(this.config.mcpConfigPath);
+
+            if (mcpAdapter.toolSchemas && mcpAdapter.toolSchemas.length) {
+                this.mcpAdapter = mcpAdapter;
+                this.toolSchemas.push(...mcpAdapter.toolSchemas);
+            }
+        }
     }
 
     async dispatch(toolCalls) {
@@ -54,7 +72,9 @@ class ToolHandler {
 
             const toolName = toolCall.function.name;
 
-            if (this.tools.has(toolName)) { // Check if we have the requested tool
+            if (this.tools.has(toolName)) {
+
+                // We have the requested tool
 
                 const tool = this.tools.get(toolName);
 
@@ -70,6 +90,26 @@ class ToolHandler {
                         return null;
                     }
                 }
+
+            } else if (this.mcpAdapter && this.mcpAdapter.tools.has(toolName)) {
+
+                // MCPAdapter has the requested tool
+
+                const mcpTool = this.mcpAdapter.tools.get(toolName);
+
+                try {
+
+                    return await mcpTool.do(toolCall, this.mcpAdapter);
+
+                } catch (error) {
+                    if (error instanceof ToolError) {
+                        return this.failureEnvelope(toolCall.id, error.kind, error.message);
+                    } else {
+                        console.error(error);
+                        return null;
+                    }
+                }
+
             } else {
                 return this.failureEnvelope(toolCall.id, "tool_not_found", `Tool ${toolName} not found`);
             }

@@ -141,7 +141,7 @@ class ChatDataProvider {
             this.update();
         });
 
-        emitter.on("showPreviousTurn", () => {
+        emitter.on("showPrevTurn", () => {
             this.currentTurnIndex -= 1;
             this.update();
         });

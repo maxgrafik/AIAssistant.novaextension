@@ -108,7 +108,7 @@ class SessionDataProvider {
             item.image = "sidebar-model";
             break;
         case "tokens":
-            item.descriptiveText = `${element.value.toLocaleString()} tokens`;
+            item.descriptiveText = element.value ? `${element.value.toLocaleString()} tokens` : "No data available";
             item.image = "sidebar-tokens";
             break;
         }

@@ -3,7 +3,7 @@
     "name": "AI Assistant",
     "organization": "Hendrik Meinl",
     "description": "AI Assistant for Nova",
-    "version": "0.4.1",
+    "version": "0.5.0",
     "categories": ["sidebars", "commands"],
     "repository": "https://github.com/maxgrafik/AIAssistant.novaextension",
     "bugs": "https://github.com/maxgrafik/AIAssistant.novaextension/issues",
@@ -66,7 +66,7 @@
                         {"separator": true},
                         {
                             "title": "Show Previous",
-                            "command": "maxgrafik.AIAssistant.cmd.showPreviousTurn",
+                            "command": "maxgrafik.AIAssistant.cmd.showPrevTurn",
                             "when": "maxgrafik.AIAssistant.chat.hasPrevTurn"
                         },
                         {
@@ -324,6 +324,24 @@
             ]
         },
         {
+            "key": "maxgrafik.AIAssistant.config.sectionMCP",
+            "type": "section",
+            "title": "MCP",
+            "description": "A very basic implementation of the Model Context Protocol. Tool calls need to pass a basic argument validation. Other than that, you’re pretty much alone. Proceed with caution, and don’t expect anything.",
+            "children": [
+                {
+                    "key": "maxgrafik.AIAssistant.config.mcpConfigPath",
+                    "type": "path",
+                    "allowFiles": true,
+                    "allowFolders": false,
+                    "filetype": ["json"],
+                    "title": "Configuration",
+                    "placeholder": "mcp.json",
+                    "default": null
+                }
+            ]
+        },
+        {
             "key": "maxgrafik.AIAssistant.config.sectionContext",
             "type": "section",
             "title": "Context Management",
@@ -503,9 +521,25 @@
             ]
         },
         {
+            "key": "maxgrafik.AIAssistant.workspace.sectionMCP",
+            "type": "section",
+            "title": "MCP",
+            "children": [
+                {
+                    "key": "maxgrafik.AIAssistant.workspace.mcpConfigPath",
+                    "type": "path",
+                    "allowFiles": true,
+                    "allowFolders": false,
+                    "filetype": ["json"],
+                    "title": "Configuration",
+                    "default": null
+                }
+            ]
+        },
+        {
             "key": "maxgrafik.AIAssistant.workspace.sectionContext",
             "type": "section",
-            "title": "Context Management",
+            "title": "Context",
             "children": [
                 {
                     "key": "maxgrafik.AIAssistant.workspace.contextStrategy",

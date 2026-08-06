@@ -19,6 +19,7 @@ The extension supports two levels of configuration:
 - **Wrap Width:** Adjusts how the chat text wraps in the sidebar.
 - **Plain Text:** If enabled, the extension will strip Markdown syntax from responses for a cleaner look.
 - **Show Last Turn Only:** When enabled, the sidebar only shows the most recent exchange, keeping the UI clean while preserving the full conversation history in the background.
+- **Stream Response:** A “live” output of the assistant’s response. Only useful, if “Show Last Turn Only” is also enabled and your assistant’s answers are rather short.
 - **Context Strategy:**
     - **None:** The entire chat history is sent with every request.
     - **Sliding Window:** Only the last *n* messages are sent to stay within token limits.
@@ -31,6 +32,31 @@ The assistant can perform actions like listing files, reading files, and writing
 - **Allow:** The assistant can use the tool automatically.
 
 *Note: The assistant is restricted to your current Workspace. It cannot access files outside of your active project.*
+
+### MCP (Model Context Protocol)
+The extension provides very basic MCP support. Tool calls need to pass a basic argument validation. But there is no permission control or security check as with built-in tools.
+
+```json
+{
+    "mcpServers": {
+        "local-server": {
+            "type": "stdio",
+            "command": "npx",
+            "args": ["-y", "@modelcontextprotocol/server-github"],
+            "env": {
+                "GITHUB_TOKEN": "ghp_xxx"
+            }
+        },
+        "remote-server": {
+            "type": "http",
+            "url": "https://mcp.example.com/api",
+            "headers": {
+                "Authorization": "Bearer token"
+            }
+        }
+    }
+}
+```
 
 ## Commands
 - **New Chat:** Starts a fresh conversation.

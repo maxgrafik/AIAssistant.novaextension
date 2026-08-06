@@ -1,3 +1,8 @@
+## Version 0.5.0
+
+Added basic - I mean ***very basic*** - MCP support. Don't expect too much.
+
+
 ## Version 0.4.1
 
 Minor performance tweaks

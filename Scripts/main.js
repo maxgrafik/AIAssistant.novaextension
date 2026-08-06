@@ -30,6 +30,7 @@ const config = {
     permissionReadFiles: 0,
     permissionWriteFiles: 0,
     exclusionFileList: [],
+    mcpConfigPath: null,
     contextStrategy: 1,
     messageLimit: 20,
 };
@@ -239,8 +240,8 @@ exports.activate = function() {
         emitter.emit("toggleView");
     });
 
-    nova.commands.register("maxgrafik.AIAssistant.cmd.showPreviousTurn", () => {
-        emitter.emit("showPreviousTurn");
+    nova.commands.register("maxgrafik.AIAssistant.cmd.showPrevTurn", () => {
+        emitter.emit("showPrevTurn");
     });
 
     nova.commands.register("maxgrafik.AIAssistant.cmd.showNextTurn", () => {
