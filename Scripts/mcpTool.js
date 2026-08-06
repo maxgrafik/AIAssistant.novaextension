@@ -59,6 +59,14 @@ class MCPTool extends Tool {
             params: {
                 name: this.name,
                 arguments: args,
+                _meta: {
+                    "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+                    "io.modelcontextprotocol/clientInfo": {
+                        name: nova.extension.name,
+                        version: nova.extension.version
+                    },
+                    "io.modelcontextprotocol/clientCapabilities": {}
+                }
             },
         };
 

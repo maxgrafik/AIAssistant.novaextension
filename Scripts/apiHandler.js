@@ -161,6 +161,7 @@ class APIHandler {
                 headers: {
                     ...(this.config.APIKey ? { "Authorization": `Bearer ${this.config.APIKey}` } : {}),
                     "Content-Type": "application/json",
+                    // "Accept": "application/json,text/event-stream",
                 },
                 body: JSON.stringify({
                     session_id: this.session.ID,
@@ -177,12 +178,19 @@ class APIHandler {
             });
 
             if (!response.ok) {
-                const e = await response.json();
-                if (typeof e === "object" && !Array.isArray(e) && e !== null && e.error) {
-                    throw new Error(e.error.message);
-                } else {
-                    throw new Error(`Server returned an error:\n${response.statusText}`);
+
+                const responseHeaders = response.headers;
+                const contentType = responseHeaders.get("Content-Type");
+
+                if (contentType === "application/json") {
+                    const responseObj = await response.json();
+                    const errorMessage = responseObj?.error?.message || null;
+                    if (errorMessage) {
+                        throw new Error(errorMessage);
+                    }
                 }
+
+                throw new Error(`${response.status} ${response.statusText}`);
             }
 
 

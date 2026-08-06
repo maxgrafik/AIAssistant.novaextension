@@ -1,3 +1,14 @@
+## Version 0.5.2
+
+- Improved error handling in `apiHandler.js`
+- Improved MCP message handling on `stdin`
+- Fixed stream redraw logic in `chatDataProvider.js`
+- Added mandatory MCP headers to `http` requests
+- Added `_meta` params for MCP tool calls
+- Added correct `clientInfo` to `_meta` params
+- **Note:** MCP will fail for servers not supporting the modern protocol version (2026-07-28)
+
+
 ## Version 0.5.1
 
 Improved MCP error handling

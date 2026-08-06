@@ -103,14 +103,15 @@ class ChatDataProvider {
             }
 
 
-            // Find the first point of divergence
+            // Search backwards to find the first line
+            // where currentLines and newLines align
 
             const searchEnd = Math.min(i, newLines.length - 1);
 
             let diffIndex = -1;
             for (let j = searchEnd; j >= 0; j--) {
-                if (currentLines[j].text !== newLines[j].text) {
-                    diffIndex = j;
+                if (currentLines[j].text === newLines[j].text) {
+                    diffIndex = j + 1;
                     break;
                 }
             }

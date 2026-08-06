@@ -105,8 +105,8 @@ class MCPAdapter {
                 _meta: {
                     "io.modelcontextprotocol/protocolVersion": "2026-07-28",
                     "io.modelcontextprotocol/clientInfo": {
-                        name: "NovaAIAssistant",
-                        version: "1.0.0"
+                        name: nova.extension.name,
+                        version: nova.extension.version
                     },
                     "io.modelcontextprotocol/clientCapabilities": {}
                 }
@@ -169,6 +169,9 @@ class MCPAdapter {
         const headers = {
             "Content-Type": "application/json",
             "Accept": "application/json,text/event-stream",
+            "MCP-Protocol-Version": "2026-07-28",
+            "Mcp-Method": jsonrpc.method,
+            ...(jsonrpc.method === "tools/call" ? { "Mcp-Name": jsonrpc.params.name } : {}),
         };
 
         if (!!tool.headers && typeof tool.headers === "object") {
@@ -211,8 +214,6 @@ class MCPAdapter {
     async sendStdio(tool, jsonrpc) {
         return new Promise(resolve => {
 
-            let stdout = "";
-
             const eventListeners = new CompositeDisposable();
 
             // Create Process
@@ -225,15 +226,95 @@ class MCPAdapter {
             // Add event listeners
 
             eventListeners.add(
-                process.onStdout(chunk => {
+                process.onStdout(lines => {
 
-                    stdout += chunk.trim();
+                    // Stdio
+                    // https://modelcontextprotocol.io/specification/2026-07-28/basic/transports/stdio
+                    //
+                    // - Messages are delimited by newlines, and MUST NOT contain embedded newlines
+                    // - Each message is a single JSON-RPC request, notification, or response
+                    // - The client SHOULD initiate shutdown by:
+                    //   1. Closing the input stream to the child process (the server)
+                    //   2. Waiting for the server to exit
+                    //   3. If the server does not exit within a reasonable time, forcibly terminating the process
+                    //
+                    //
+                    // https://modelcontextprotocol.io/specification/2026-07-28/basic
+                    //
+                    // Result Responses
+                    // - Result responses MUST include the same ID as the request they correspond to
+                    // - Result responses MUST include a result field
+                    // - The result field MUST include a resultType field to indicate the type of the result
+                    //   - "complete" = the request completed successfully
+                    //   - "input_required" = likely a multi round-trip request (MRTR)
+                    //   - A resultType of any value unrecognized by the client MUST be considered invalid
+                    //   - Treat absent resultType as "complete" (for backward compatibility)
+                    //
+                    // {
+                    //     jsonrpc: "2.0",
+                    //     id: string | number,
+                    //     result: {
+                    //         resultType: string
+                    //     }
+                    // }
+                    //
+                    // Error Responses
+                    // - Error responses MUST include the same ID as the request they correspond to
+                    // - Error responses MUST include an error field with a "code" and "message"
+                    //
+                    // {
+                    //     jsonrpc: "2.0",
+                    //     id: string | number,
+                    //     error: {
+                    //         ...
+                    //     }
+                    // }
+
+                    const messages = lines.split("\n").filter(line => line.trim() !== "");
 
                     try {
-                        resolve(JSON.parse(stdout));
-                        process.terminate();
+                        for (let message of messages) {
+
+                            message = JSON.parse(message.trim());
+
+                            if (
+                                message.id === jsonrpc.id &&
+                                (
+                                    (message.result && message.result.resultType === "complete") ||
+                                    (message.result && message.result.resultType === undefined) ||
+                                    (message.error)
+                                )
+                            ) {
+                                eventListeners.dispose();
+                                process.terminate();
+                                resolve(message);
+                                return;
+                            }
+
+                            if (message.id === jsonrpc.id && message.result?.resultType !== "complete") {
+                                eventListeners.dispose();
+                                process.terminate();
+                                resolve(null);
+                                return;
+                            }
+
+                            // What shall we do with the drunk...
+                            // We likely may never support MRTR ("input_required")
+                            //
+                            // if (message.id === jsonrpc.id && message.result?.resultType === "input_required") {
+                            //     eventListeners.dispose();
+                            //     process.terminate();
+                            //     resolve(message);
+                            //     return;
+                            // }
+                        }
+
                     } catch (error) {
-                        // noop - message not complete yet
+                        console.error(`[MCP] Error parsing message (stdin)\n${error.message}`);
+                        eventListeners.dispose();
+                        process.terminate();
+                        resolve(null);
+                        return;
                     }
                 })
             );
@@ -259,6 +340,8 @@ class MCPAdapter {
 
             if (!stream) {
                 console.error("[MCP] No WriteableStream (stdin)");
+                eventListeners.dispose();
+                process.terminate();
                 resolve(null);
                 return;
             }
@@ -271,7 +354,9 @@ class MCPAdapter {
                 writer.close();
             } catch (error) {
                 console.error(`[MCP] Writing to stdin failed\n${error.message}`);
-                writer.close();
+                writer?.close();
+                eventListeners.dispose();
+                process.terminate();
                 resolve(null);
             }
         });
@@ -280,7 +365,7 @@ class MCPAdapter {
     async parseResponse(data) {
 
         if (!data) {
-            throw new Error("No data returned");
+            throw new Error("No valid data returned");
         }
 
         if (!data.jsonrpc || data.jsonrpc !== "2.0") {
