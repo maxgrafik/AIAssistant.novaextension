@@ -64,14 +64,9 @@ class MCPTool extends Tool {
 
         try {
 
-            const data = await mcpAdapter.send(this, jsonrpc);
+            const result = await mcpAdapter.send(this, jsonrpc);
 
-            if (!data) {
-                throw new ToolError("execution_error", "Tool returned no data");
-            }
-
-            const content = data.result?.content || null;
-
+            const content = result.content || null;
             if (!content) {
                 throw new ToolError("execution_error", "Tool returned no result");
             }

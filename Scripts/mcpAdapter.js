@@ -115,9 +115,9 @@ class MCPAdapter {
 
         try {
 
-            const data = await this.send(config, jsonrpc);
+            const result = await this.send(config, jsonrpc);
 
-            return data?.result?.tools || null;
+            return result.tools || null;
 
         } catch (error) {
             console.error(`[MCP] Error getting tool list (${server})`);
@@ -150,13 +150,18 @@ class MCPAdapter {
     //! Helper
 
     async send(tool, jsonrpc) {
+
+        let data = null;
+
         if (tool.url) {
-            return await this.sendHttp(tool, jsonrpc);
+            data = await this.sendHttp(tool, jsonrpc);
         } else if (tool.command) {
-            return await this.sendStdio(tool, jsonrpc);
+            data = await this.sendStdio(tool, jsonrpc);
         } else {
             return null;
         }
+
+        return await this.parseResponse(data);
     }
 
     async sendHttp(tool, jsonrpc) {
@@ -178,17 +183,16 @@ class MCPAdapter {
             body: JSON.stringify(jsonrpc),
         });
 
+        const responseHeaders = response.headers;
+        const contentType = responseHeaders.get("Content-Type");
+
         if (!response.ok) {
-            const jsonrpcError = await response.json();
-            if (jsonrpcError?.error?.message) {
-                throw new Error(`${jsonrpcError.error.message}`);
+            if (contentType === "application/json") {
+                return await response.json();
             } else {
                 throw new Error(`${response.status} ${response.statusText}`);
             }
         }
-
-        const responseHeaders = response.headers;
-        const contentType = responseHeaders.get("Content-Type");
 
         if (contentType === "text/event-stream") {
 
@@ -271,6 +275,29 @@ class MCPAdapter {
                 resolve(null);
             }
         });
+    }
+
+    async parseResponse(data) {
+
+        if (!data) {
+            throw new Error("No data returned");
+        }
+
+        if (!data.jsonrpc || data.jsonrpc !== "2.0") {
+            throw new Error("Response is not a JSON-RPC 2.0 message");
+        }
+
+        if (data.error) {
+            throw new Error(data.error.message);
+        }
+
+        const result = data.result || null;
+
+        if (!result) {
+            throw new Error('Response does not contain "result" field');
+        }
+
+        return result;
     }
 
     async parseResponseBody(stream) {

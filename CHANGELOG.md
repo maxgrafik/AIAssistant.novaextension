@@ -1,3 +1,8 @@
+## Version 0.5.1
+
+Improved MCP error handling
+
+
 ## Version 0.5.0
 
 Added basic - I mean ***very basic*** - MCP support. Don't expect too much.
