@@ -147,9 +147,17 @@ class APIHandler {
             }
 
 
-            // Check Tool Use
+            // Available Tools
 
-            const allowToolUse = nova.workspace.path && this.config.allowToolUse;
+            const availableTools = [];
+
+            if (this.config.allowToolUse && nova.workspace.path) {
+                availableTools.push(...this.toolHandler.toolSchemas);
+            }
+
+            if (this.toolHandler.mcpAdapter.toolSchemas.length) {
+                availableTools.push(...this.toolHandler.mcpAdapter.toolSchemas);
+            }
 
 
             // Fetch stream
@@ -170,8 +178,8 @@ class APIHandler {
                     max_tokens: this.config.maxTokens || 2048,
                     temperature: Number(this.config.temperature.replace(",", ".")) || 0.2,
                     top_p: Number(this.config.topP.replace(",", ".")) || 0.9,
-                    tools: allowToolUse ? this.toolHandler.toolSchemas : [],
-                    tool_choice: allowToolUse ? "auto" : "none",
+                    ...(availableTools.length ? { tools:  availableTools } : {}),
+                    ...(availableTools.length ? { tool_choice:  "auto" } : {}),
                     stream: true,
                     stream_options: { include_usage: true },
                 }),

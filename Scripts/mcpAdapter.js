@@ -9,28 +9,47 @@ const MCPTool = require("mcpTool.js");
 
 class MCPAdapter {
 
-    constructor() {
+    constructor(config, emitter) {
+
+        this.config = config;
+        this.emitter = emitter;
 
         this.tools = new Map();
-        this.toolSchemas = null;
+        this.toolSchemas = [];
+
+        this.PROTOCOL_VERSION = "2026-07-28";
+
+
+        //! Events
+
+        emitter.on("reloadMCPTools", () => {
+            this.loadTools();
+        });
     }
 
-    async loadConfig(mcpConfigPath) {
+    async loadTools() {
+
+        this.tools.clear();
+        this.toolSchemas = [];
+
+        if (!this.config.mcpConfigPath) {
+            return;
+        }
 
         const mcpServers = new Map();
 
         try {
 
-            const fileStats = nova.fs.stat(mcpConfigPath);
+            const fileStats = nova.fs.stat(this.config.mcpConfigPath);
             if (fileStats && !fileStats.isFile()) {
                 throw new Error("The provided configuration is not a file");
             }
 
-            if (!nova.fs.access(mcpConfigPath, nova.fs.F_OK + nova.fs.R_OK)) {
+            if (!nova.fs.access(this.config.mcpConfigPath, nova.fs.F_OK + nova.fs.R_OK)) {
                 throw new Error("The configuration file does not exist or can not be read");
             }
 
-            const fileObj = nova.fs.open(mcpConfigPath, "r");
+            const fileObj = nova.fs.open(this.config.mcpConfigPath, "r");
             const content = fileObj.read();
             fileObj.close();
 
@@ -68,8 +87,12 @@ class MCPAdapter {
 
             const tools = await this.getTools(server, config);
 
-            if (!tools || !Array.isArray(tools) || tools.length === 0) {
+            if (tools !== null && (!Array.isArray(tools) || tools.length === 0)) {
                 console.error(`[MCP] Returned tool list is empty or invalid (${server})`);
+                return null;
+            }
+
+            if (tools === null) {
                 return null;
             }
 
@@ -103,7 +126,7 @@ class MCPAdapter {
             method: "tools/list",
             params: {
                 _meta: {
-                    "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+                    "io.modelcontextprotocol/protocolVersion": this.PROTOCOL_VERSION,
                     "io.modelcontextprotocol/clientInfo": {
                         name: nova.extension.name,
                         version: nova.extension.version
@@ -169,7 +192,7 @@ class MCPAdapter {
         const headers = {
             "Content-Type": "application/json",
             "Accept": "application/json,text/event-stream",
-            "MCP-Protocol-Version": "2026-07-28",
+            "MCP-Protocol-Version": this.PROTOCOL_VERSION,
             "Mcp-Method": jsonrpc.method,
             ...(jsonrpc.method === "tools/call" ? { "Mcp-Name": jsonrpc.params.name } : {}),
         };
@@ -277,6 +300,8 @@ class MCPAdapter {
 
                             message = JSON.parse(message.trim());
 
+                            // Response complete or error
+
                             if (
                                 message.id === jsonrpc.id &&
                                 (
@@ -291,22 +316,33 @@ class MCPAdapter {
                                 return;
                             }
 
-                            if (message.id === jsonrpc.id && message.result?.resultType !== "complete") {
+                            // What shall we do with the drunk...
+                            // We likely may never support MRTR ("input_required")
+
+                            if (
+                                message.id === jsonrpc.id &&
+                                message.result &&
+                                message.result.resultType === "input_required"
+                            ) {
                                 eventListeners.dispose();
                                 process.terminate();
                                 resolve(null);
                                 return;
                             }
 
-                            // What shall we do with the drunk...
-                            // We likely may never support MRTR ("input_required")
-                            //
-                            // if (message.id === jsonrpc.id && message.result?.resultType === "input_required") {
-                            //     eventListeners.dispose();
-                            //     process.terminate();
-                            //     resolve(message);
-                            //     return;
-                            // }
+                            // Consider any other result type invalid
+
+                            if (
+                                message.id === jsonrpc.id &&
+                                message.result &&
+                                message.result.resultType !== "complete" &&
+                                message.result.resultType !== "input_required"
+                            ) {
+                                eventListeners.dispose();
+                                process.terminate();
+                                resolve(null);
+                                return;
+                            }
                         }
 
                     } catch (error) {

@@ -1,3 +1,9 @@
+## Version 0.5.3
+
+- Decoupled MCP tools from “Allow Tool Use” settings
+- MCP tools will now reload mid-session when changing the config file in settings
+
+
 ## Version 0.5.2
 
 - Improved error handling in `apiHandler.js`

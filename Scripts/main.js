@@ -376,10 +376,11 @@ function updateConfigFromGlobal(newVal) {
 
     const workspaceConfig = nova.workspace.config.get("maxgrafik.AIAssistant.workspace."+key);
     if (workspaceConfig === null || workspaceConfig === undefined) {
-        config[key] = newVal;
+        if (config[key] !== newVal) {
+            config[key] = newVal;
+            signalConfigChanges(key);
+        }
     }
-
-    signalConfigChanges(key);
 }
 
 function signalConfigChanges(key) {
@@ -404,6 +405,12 @@ function signalConfigChanges(key) {
 
         // Updates chatTreeView
         emitter.emit("toggleView", config[key]);
+        break;
+
+    case "mcpConfigPath":
+
+        // Clears current MCP tools and reloads config
+        emitter.emit("reloadMCPTools");
         break;
 
     default:

@@ -18,7 +18,7 @@ class ToolHandler {
         this.tools = new Map();
         this.toolSchemas = null;
 
-        this.mcpAdapter = null;
+        this.mcpAdapter = new MCPAdapter(config, emitter);
 
         this.loadTools();
     }
@@ -54,17 +54,8 @@ class ToolHandler {
 
         //! MCP Tools
 
-        if (this.config.mcpConfigPath) {
+        this.mcpAdapter.loadTools();
 
-            const mcpAdapter = new MCPAdapter();
-
-            await mcpAdapter.loadConfig(this.config.mcpConfigPath);
-
-            if (mcpAdapter.toolSchemas && mcpAdapter.toolSchemas.length) {
-                this.mcpAdapter = mcpAdapter;
-                this.toolSchemas.push(...mcpAdapter.toolSchemas);
-            }
-        }
     }
 
     async dispatch(toolCalls) {
@@ -72,7 +63,7 @@ class ToolHandler {
 
             const toolName = toolCall.function.name;
 
-            if (this.tools.has(toolName)) {
+            if (this.config.allowToolUse && this.tools.has(toolName)) {
 
                 // We have the requested tool
 
@@ -91,7 +82,7 @@ class ToolHandler {
                     }
                 }
 
-            } else if (this.mcpAdapter && this.mcpAdapter.tools.has(toolName)) {
+            } else if (this.mcpAdapter.tools.has(toolName)) {
 
                 // MCPAdapter has the requested tool
 
