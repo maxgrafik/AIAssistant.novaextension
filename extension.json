@@ -3,7 +3,7 @@
     "name": "AI Assistant",
     "organization": "Hendrik Meinl",
     "description": "AI Assistant for Nova",
-    "version": "0.5.3",
+    "version": "0.5.4",
     "categories": ["sidebars", "commands"],
     "repository": "https://github.com/maxgrafik/AIAssistant.novaextension",
     "bugs": "https://github.com/maxgrafik/AIAssistant.novaextension/issues",
@@ -49,14 +49,19 @@
                     ],
                     "contextCommands": [
                         {
-                            "title": "Copy code",
+                            "title": "Copy Code",
                             "command": "maxgrafik.AIAssistant.ctx.copyCode",
                             "when": "viewItem == 'isCodeSnippet'"
                         },
                         {
-                            "title": "Copy message",
+                            "title": "Copy Message",
                             "command": "maxgrafik.AIAssistant.ctx.copyMessage",
                             "when": "viewItem == 'isMessage'"
+                        },
+                        {
+                            "title": "Open URL",
+                            "command": "maxgrafik.AIAssistant.ctx.openURL",
+                            "when": "viewItem == 'isURL'"
                         },
                         {"separator": true},
                         {
@@ -141,7 +146,7 @@
                 "command": "maxgrafik.AIAssistant.cmd.newChat"
             },
             {
-                "title": "Load Chat …",
+                "title": "Open Chat …",
                 "command": "maxgrafik.AIAssistant.cmd.openChat"
             },
             {"separator": true},
@@ -219,7 +224,7 @@
                     "key": "maxgrafik.AIAssistant.config.showStream",
                     "type": "boolean",
                     "title": "Stream Response",
-                    "description": "[Experimental] This streams the assistant’s response. Only useful in combination with “Show last turn only”. May cause severe flickering and scrolling issues. If your AI is extremely chatty, you may want to leave this off.",
+                    "description": "Enables real-time streaming of the assistant’s output (up to 50 lines). Most effective when paired with “Show Last Turn Only” ... and if your assistant isn’t too chatty.",
                     "default": false
                 },
                 {
@@ -327,7 +332,7 @@
             "key": "maxgrafik.AIAssistant.config.sectionMCP",
             "type": "section",
             "title": "MCP",
-            "description": "A very basic implementation of the Model Context Protocol. Tool calls need to pass a basic argument validation. Other than that, you’re pretty much alone. Proceed with caution, and don’t expect anything.",
+            "description": "Basic implementation of the Model Context Protocol. Please note that MCP servers are managed externally. Make sure that the connected servers are configured securely and that the permissions granted to the assistant are appropriate for the intended use.",
             "children": [
                 {
                     "key": "maxgrafik.AIAssistant.config.mcpConfigPath",
@@ -352,7 +357,7 @@
                     "type": "enum",
                     "radio": false,
                     "title": "Strategy",
-                    "description": "None: Send the entire chat history with every request\nSliding Window: Send only the last ~n messages to stay within token limits",
+                    "description": "None: Send the full history with every request. For maximum context.\nSliding Window: Send only the last ~n messages to stay within token limits",
                     "values": [[0, "None"], [1, "Sliding Window"]],
                     "default": 1
                 },

@@ -3,8 +3,8 @@
 ## Quick Start
 1. **Set a Server URL**: Before using the assistant, ensure you have the URL for an inference provider configured. This can be local (e.g., [Osaurus](https://osaurus.ai)) or remote. The server must support OpenAI compatible API endpoints (`/models`, `/chat/completions`).
 2. **Select a Model:** Select a model in the “Info” sidebar.
-2. **Ask Assistant:** Use the “Ask Assistant” command in the editor or the “Chat bubble” button in the chat sidebar to start a conversation.
-3. **Context:** The assistant automatically uses your workspace context to provide more relevant answers.
+3. **Ask Assistant:** Use the “Ask Assistant” command in the editor or the “Chat bubble” button in the chat sidebar to start a conversation.
+4. **Context:** The assistant automatically uses your workspace context to provide more relevant answers.
 
 ## Configuration Overview
 
@@ -19,9 +19,9 @@ The extension supports two levels of configuration:
 - **Wrap Width:** Adjusts how the chat text wraps in the sidebar.
 - **Plain Text:** If enabled, the extension will strip Markdown syntax from responses for a cleaner look.
 - **Show Last Turn Only:** When enabled, the sidebar only shows the most recent exchange, keeping the UI clean while preserving the full conversation history in the background.
-- **Stream Response:** A “live” output of the assistant’s response. Only useful, if “Show Last Turn Only” is also enabled and your assistant’s answers are rather short.
+- **Stream Response:** Enables real-time streaming of the assistant’s output. This is most effective when paired with “Show Last Turn Only”, allowing short responses to appear instantly while keeping the chat history clean.
 - **Context Strategy:**
-    - **None:** The entire chat history is sent with every request.
+    - **None:** Sends the full history for maximum context.
     - **Sliding Window:** Only the last *n* messages are sent to stay within token limits.
 - **Message Limit:** Defines the maximum number of messages considered in the “Sliding Window” strategy.
 
@@ -34,7 +34,11 @@ The assistant can perform actions like listing files, reading files, and writing
 *Note: The assistant is restricted to your current Workspace. It cannot access files outside of your active project.*
 
 ### MCP (Model Context Protocol)
-The extension provides very basic MCP support. Tool calls need to pass a basic argument validation. But there is no permission control or security check as with built-in tools.
+The extension provides basic support for the Model Context Protocol to integrate external data sources and tools.
+
+**Security Note:** Please note that this extension does not provide independent permission controls or security filtering for MCP servers. Since MCP servers are managed externally, you are solely responsible for ensuring that the connected servers are configured securely and that the permissions granted to the assistant are appropriate for the intended use.
+
+You can configure your MCP servers via a `.json` file:
 
 ```json
 {

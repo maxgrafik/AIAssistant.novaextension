@@ -5,8 +5,6 @@
  * @copyright 2026 Hendrik Meinl
  */
 
-const Message = require("chat/message.js");
-
 class ChatDataProvider {
 
     constructor(config, emitter, session) {
@@ -25,7 +23,7 @@ class ChatDataProvider {
         this.currentTurnIndex = null;
         this.showLastTurnOnly = this.config.showLastTurnOnly;
 
-        this.intermediateMessage = null;
+        this.updateItems = [];
         this.updateTimer = null;
 
 
@@ -39,90 +37,104 @@ class ChatDataProvider {
 
         //! Events
 
-        emitter.on("addIntermediateMessage", () => {
-
-            this.intermediateMessage = new Message(
-                this.config,
-                { role: "IntermediateMessage", content: " " }
-            );
-
+        emitter.on("updateChatView", (message) => {
             if (this.showLastTurnOnly) {
                 this.currentTurnIndex = null;
             }
-
-            this.update();
+            this.update(message);
         });
 
-        emitter.on("removeIntermediateMessage", () => {
-
-            this.intermediateMessage = null;
-
-            if (this.showLastTurnOnly) {
-                this.currentTurnIndex = null;
-            }
-
-            this.update();
-        });
-
-        emitter.on("updateIntermediateMessage", (chunk) => {
+        emitter.on("updatePendingMessage", (chunk) => {
 
             const content = chunk.choices?.[0]?.delta?.content;
             if (!content) {
                 return;
             }
 
-            this.intermediateMessage.content += content;
+            const pendingMessage = this.session.messages.findLast(msg => msg.isPending);
+            if (!pendingMessage) {
+                return;
+            }
+
+            if (pendingMessage.content === null) {
+                pendingMessage.content = "";
+            }
+
+            pendingMessage.content += content;
 
             if (!this.config.showStream) {
                 return;
             }
 
+            const curLines = pendingMessage.UIContent;
+            const newLines = pendingMessage.wrapContent();
 
-            const newLines = this.intermediateMessage.wrapContent();
-            const currentLines = this.intermediateMessage.UIContent;
-            const i = currentLines.length - 1;
+            const curLength = curLines.length;
+            const newLength = newLines.length;
 
+            const startIndex = Math.min(newLength, curLength) - 1;
 
-            // Quick reject
+            for (let i = startIndex; i >= 0; i--) {
 
-            if (newLines.length === 0) {
-                return;
-            }
-
-
-            // Only the last line changed
-
-            if (newLines.length === currentLines.length) {
+                const curLine = curLines[i];
                 const newLine = newLines[i];
-                const curLine = currentLines[i];
-                if (newLine?.text !== undefined && newLine.text !== curLine.text) {
+                const curLineType = curLine.constructor.name;
+                const newLineType = newLine.constructor.name;
+
+                if (
+                    newLineType === "UITextLine" &&
+                    newLine.text === curLine.text &&
+                    newLine.text !== ""
+                ) {
+                    break;
+                }
+
+                if (
+                    newLineType === "UITextLine" &&
+                    newLine.text !== curLine.text
+                ) {
                     curLine.text = newLine.text;
                     this.scheduleUpdate(curLine);
+                    continue;
                 }
-                return;
-            }
+
+                if (
+                    newLineType === "UICodeBlock" &&
+                    curLineType !== "UICodeBlock"
+                ) {
+
+                    // When replacing the current UITextLine with UICodeBlock
+                    // we would need to update the entire message = flickering
+
+                    // pendingMessage.UIContent[i] = newLine;
+                    // for (let j = i+1; j < curLength; j++) {
+                    //     curLines[j].text = "";
+                    // }
+                    // this.update(pendingMessage);
+                    // return;
 
 
-            // Search backwards to find the first line
-            // where currentLines and newLines align
+                    // This is faster and smoother, but the actual
+                    // code is not available until streaming is done
 
-            const searchEnd = Math.min(i, newLines.length - 1);
-
-            let diffIndex = -1;
-            for (let j = searchEnd; j >= 0; j--) {
-                if (currentLines[j].text === newLines[j].text) {
-                    diffIndex = j + 1;
+                    curLine.text = `❯  [${newLine.language}]`;
+                    this.scheduleUpdate(curLine);
                     break;
                 }
             }
 
-            if (diffIndex === -1) {
-                diffIndex = searchEnd + 1;
+            for (let i = newLength; i < curLength; i++) {
+                if (curLines[i]?.text !== "") {
+                    curLines[i].text = "";
+                    this.scheduleUpdate(curLines[i]);
+                }
             }
 
-            currentLines.splice(diffIndex, currentLines.length - diffIndex,...newLines.slice(diffIndex));
-
-            this.scheduleUpdate(this.intermediateMessage);
+            if (newLength > curLength) {
+                const i = curLength - 1;
+                curLines[i].text = "[Please wait ...]";
+                this.scheduleUpdate(curLines[i]);
+            }
         });
 
         emitter.on("toggleView", (state) => {
@@ -205,6 +217,10 @@ class ChatDataProvider {
             this.copyMessage();
         });
 
+        emitter.on("openURL", () => {
+            this.openURL();
+        });
+
         emitter.on("rewrapMessages", () => {
             for (const message of this.session.messages) {
                 if (message.role === "user" || message.role === "assistant") {
@@ -244,6 +260,20 @@ class ChatDataProvider {
         }
     }
 
+    openURL() {
+
+        const selection = this.treeView.selection;
+        if (selection.length === 0) {
+            return;
+        }
+
+        const element = selection[0];
+        const url = element.text.match(/➜\s([a-z]+:\/\/[^\s]+)/)?.[1];
+        if (url) {
+            nova.openURL(url);
+        }
+    }
+
 
     //! TreeDataProvider required methods
 
@@ -256,14 +286,12 @@ class ChatDataProvider {
             const messages = this.session.messages
                 .filter(msg => msg.role === "user" || msg.role === "assistant");
 
-            let children = [];
-
             if (!this.showLastTurnOnly) {
                 nova.workspace.context.set("maxgrafik.AIAssistant.chat.hasPrevTurn", false);
                 nova.workspace.context.set("maxgrafik.AIAssistant.chat.hasNextTurn", false);
                 nova.workspace.context.set("maxgrafik.AIAssistant.chat.isLastTurn", true);
                 this.currentTurnIndex = null;
-                children = [...messages];
+                return messages;
             } else {
 
                 const turnIndices = messages
@@ -297,14 +325,8 @@ class ChatDataProvider {
                 const start = turnIndices[this.currentTurnIndex];
                 const end = turnIndices[this.currentTurnIndex+1] || messages.length;
 
-                children = [...messages.slice(start, end)];
+                return messages.slice(start, end);
             }
-
-            if (this.intermediateMessage !== null) {
-                children.push(this.intermediateMessage);
-            }
-
-            return children;
         }
 
 
@@ -333,13 +355,10 @@ class ChatDataProvider {
 
         if (elementType === "Message") {
             const item = new TreeItem("", TreeItemCollapsibleState.Expanded);
-            item.name = (element.role === "user") ? "You" : "Assistant";
-            item.contextValue = (element.content !== null) ? "isMessage" : "";
-            item.image = (element.role === "user") ? "sidebar-user" : "sidebar-assistant";
-
-            if (element.role === "IntermediateMessage") {
-                item.descriptiveText = "working …";
-            }
+            item.name = element.role === "user" ? "You" : "Assistant";
+            item.descriptiveText = element.isPending ? "working …" : "";
+            item.contextValue = element.content !== null ? "isMessage" : "";
+            item.image = element.role === "user" ? "sidebar-user" : "sidebar-assistant";
             return item;
         }
 
@@ -374,6 +393,7 @@ class ChatDataProvider {
 
         if (elementType === "UITextLine") {
             const item = new TreeItem(element.text, TreeItemCollapsibleState.None);
+            item.contextValue = /➜\s[a-z]+:\/\/[^\s]+/.test(element.text) ? "isURL" : "";
             item.image = "sidebar-text";
             return item;
         }
@@ -395,11 +415,13 @@ class ChatDataProvider {
     reset() {
         this.currentTurnIndex = null;
         this.showLastTurnOnly = this.config.showLastTurnOnly;
-        this.intermediateMessage = null;
+        this.updateItems = [];
         this.updateTimer = null;
     }
 
     scheduleUpdate(element) {
+
+        this.updateItems.push(element);
 
         if (this.updateTimer) {
             return;
@@ -407,7 +429,10 @@ class ChatDataProvider {
 
         this.updateTimer = setTimeout(() => {
 
-            this.update(element);
+            while (this.updateItems.length) {
+                this.update(this.updateItems.shift());
+            }
+
             this.updateTimer = null;
 
         }, 60);

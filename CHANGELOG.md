@@ -1,3 +1,10 @@
+## Version 0.5.4
+
+- Found a way to make streaming responses smoother. Yet another hack to deal with Nova’s delightful tendency to make a developer’s life harder
+- Improved plain text conversion and added URL detection
+- Minor cosmetic changes
+
+
 ## Version 0.5.3
 
 - Decoupled MCP tools from “Allow Tool Use” settings

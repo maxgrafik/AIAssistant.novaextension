@@ -86,7 +86,8 @@ class APIHandler {
                 // Prompt is an array of tool call results
 
                 if (prompt.length === 0) {
-                    this.emitter.emit("removeIntermediateMessage");
+                    this.session.removePendingMessages();
+                    this.emitter.emit("updateChatView", null);
                     return; // Not a single valid result?
                 }
 
@@ -104,11 +105,6 @@ class APIHandler {
                     this.session.addMessage(result);
                 }
 
-                // Show intermediate assistant message
-
-                this.emitter.emit("addIntermediateMessage");
-
-
             } else if (typeof prompt === "string") {
 
                 // Prompt is a user message
@@ -122,11 +118,6 @@ class APIHandler {
 
                 this.session.addMessage(userMessage);
 
-                // Show intermediate assistant message
-
-                this.emitter.emit("addIntermediateMessage");
-
-
             } else {
                 throw new Error("Unknown input type for sendMessage");
             }
@@ -135,6 +126,7 @@ class APIHandler {
             // Get all messages
 
             let messages = this.session.getMessages();
+
 
             // Prune chat history, if contextStrategy is "Sliding Window"
             // and messages.length > config.messageLimit
@@ -147,7 +139,7 @@ class APIHandler {
             }
 
 
-            // Available Tools
+            // Get available tools
 
             const availableTools = [];
 
@@ -158,6 +150,16 @@ class APIHandler {
             if (this.toolHandler.mcpAdapter.toolSchemas.length) {
                 availableTools.push(...this.toolHandler.mcpAdapter.toolSchemas);
             }
+
+
+            // Create (pending) assistant message
+
+            const assistantMessage = this.session.addMessage({
+                isPending: true,
+                role: "assistant",
+            });
+
+            this.emitter.emit("updateChatView", null);
 
 
             // Fetch stream
@@ -229,16 +231,18 @@ class APIHandler {
             const toolCalls = await this.parseToolCalls(chatCompletionChunks);
 
 
-            // Create assistant message
+            // Update assistant message
 
-            const assistantMessage = {
-                role: "assistant",
-                content: content || "",
-                ...(toolCalls.length ? { tool_calls: toolCalls } : {})
-            };
+            assistantMessage.isPending = false;
+            assistantMessage.content = content || null;
+            assistantMessage.UIContent = assistantMessage.wrapContent();
 
-            this.session.addMessage(assistantMessage);
-            this.emitter.emit("removeIntermediateMessage");
+            if (toolCalls.length) {
+                assistantMessage.tool_calls = toolCalls;
+                assistantMessage.addToolCallsToUIContent();
+            }
+
+            this.emitter.emit("updateChatView", assistantMessage);
             this.emitter.emit("updateTokens", promptTokens);
 
 
@@ -248,8 +252,18 @@ class APIHandler {
                 await this.toolHandler.dispatch(toolCalls);
             }
 
+
+            // If there are no more pending tool calls
+            // this turn is complete
+
+            if (toolCalls.length === 0) {
+                this.emitter.emit("turnComplete");
+            }
+
         } catch (error) {
-            this.emitter.emit("removeIntermediateMessage");
+            this.session.removePendingMessages();
+            this.emitter.emit("updateChatView", null);
+            this.emitter.emit("turnComplete");
             this.handleError(error);
         }
     }
@@ -328,7 +342,7 @@ class APIHandler {
                             const chunk = JSON.parse(payload);
 
                             out.push(chunk);
-                            this.emitter.emit("updateIntermediateMessage", chunk);
+                            this.emitter.emit("updatePendingMessage", chunk);
 
                         } catch (error) {
                             // noop

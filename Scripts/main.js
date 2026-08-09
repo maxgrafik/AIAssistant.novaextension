@@ -229,6 +229,10 @@ exports.activate = function() {
         emitter.emit("copyMessage");
     });
 
+    nova.commands.register("maxgrafik.AIAssistant.ctx.openURL", () => {
+        emitter.emit("openURL");
+    });
+
 
     //! Chat View Context Menu (View Actions)
 

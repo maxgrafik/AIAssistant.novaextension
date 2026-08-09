@@ -15,6 +15,8 @@ class Message {
 
         this.config = config;
 
+        this.isPending = message.isPending !== undefined ? message.isPending : false;
+
         this.role = message.role;
         this.content = message.content || null;
         this.tool_calls = message.tool_calls || [];
@@ -22,14 +24,27 @@ class Message {
 
         this.UIContent = [];
 
-        if (this.role === "user" || this.role === "assistant") {
+
+        // If this is a pending message (assistant only),
+        // pre-fill with 50 empty lines so we can update
+        // without flickering when streaming
+
+        if (this.isPending) {
+            for (let i = 0; i < 50; i++) {
+                this.UIContent.push(new UITextLine(""));
+            }
+        }
+
+        // If not pending, just wrap contents
+
+        if (!this.isPending && (this.role === "user" || this.role === "assistant")) {
             this.UIContent = this.wrapContent();
         }
 
-        if (this.role === "assistant" && message.tool_calls) {
-            for (const toolCall of message.tool_calls) {
-                this.UIContent.push(new UIToolCall(toolCall));
-            }
+        // Add tool calls to UIContent
+
+        if (this.role === "assistant" && this.tool_calls.length) {
+            this.addToolCallsToUIContent();
         }
     }
 
@@ -54,16 +69,33 @@ class Message {
 
         if (this.config.plainText) {
             content = content
+
+                // # Headings
                 .replace(/^(#{1,6})\s+/gm, "▍")
+
+                // - Bullet points
+                .replace(/^(\s*)\*\s/gm, "$1▪ ")
+                .replace(/^(\s*)-\s/gm, "$1▪ ")
+
+                // [Links](http://...)
+                .replace(/\[[^\]]+\]\(([^\s)]+)\)/g, "➜ $1")
+
+                // **Bold** | __Bold__
                 .replace(/\*\*([^*]+)\*\*/g, "$1")
                 .replace(/__([^_]+)__/g, "$1")
-                // .replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g, (m, p1, p2) => `${p1}${p2}`)
-                // .replace(/(^|[^_])_([^_\n]+)_(?!_)/g, (m, p1, p2) => `${p1}${p2}`) // <- removes too much
-                .replace(/\$([^$\n]+)\$/g, "⌈$1⌋") // <- Markdown Math Notation $...$
+
+                // *Italic* | _Italic_
+                .replace(/(^|\s)\*([^*\n]+)\*(?=\s)/g, (m, p1, p2) => `${p1}${p2}`)
+                .replace(/(^|\s)_([^_\n]+)_(?=\s)/g, (m, p1, p2) => `${p1}${p2}`)
+
+                // $Math$ Notation
+                .replace(/\$([^$\n]+)\$/g, "⌈$1⌋")
+
+                // `Code`
                 .replace(/`([^`\n]+)`/g, "⌈$1⌋")
-                .replace(/\\([\\`*_{}[\]()#+\-.!])/g, "$1")
-                .replace(/^(\s*)\*\s/gm, "$1▪ ")
-                .replace(/^(\s*)-\s/gm, "$1▪ ");
+
+                // Escapes
+                .replace(/\\([\\`*_{}[\]()#+\-.!])/g, "$1");
         }
 
 
@@ -94,7 +126,7 @@ class Message {
             let currentLine = leading;
             let currentLineLength = currentLine.length;
 
-            const words = paragraphText.split(/\s+/);
+            const words = paragraphText.split(/(?<!➜)\s+/); // spaces, except before url
             words.forEach(word => {
 
                 const wordLength = word.length;
@@ -114,6 +146,12 @@ class Message {
         });
 
         return lines;
+    }
+
+    addToolCallsToUIContent() {
+        for (const toolCall of this.tool_calls) {
+            this.UIContent.push(new UIToolCall(toolCall));
+        }
     }
 }
 

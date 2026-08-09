@@ -26,6 +26,15 @@ class Session {
         this.hasUnsavedChanges = false;
 
         this.hasAutoSaveFailed = false;
+
+
+        //! Events
+
+        emitter.on("turnComplete", () => {
+            if (this.config.autoSave) {
+                this.saveChat(/* isAutoSave */ true);
+            }
+        });
     }
 
     getMessages() {
@@ -41,9 +50,9 @@ class Session {
 
     addMessage(message) {
 
-        this.messages.push(
-            new Message(this.config, message)
-        );
+        const newMessage = new Message(this.config, message);
+
+        this.messages.push(newMessage);
 
         // Track tool call fails
         // Used to provide more info for failed tool calls in the UI.
@@ -52,30 +61,25 @@ class Session {
         // False positives are okay. We check again after parsing.
 
         if (
-            message.role === "tool" &&
-            /"ok"\s*:\s*false/.test(message.content)
+            newMessage.role === "tool" &&
+            /"ok"\s*:\s*false/.test(newMessage.content)
         ) {
             for(const msg of this.messages) {
 
-                const uiToolCall = msg.UIContent.find(item => item.id === message.tool_call_id);
+                const uiToolCall = msg.UIContent.find(item => item.id === newMessage.tool_call_id);
 
                 if (uiToolCall) {
-                    uiToolCall.setFailed(message.content);
+                    uiToolCall.setFailed(newMessage.content);
                     break;
                 }
             }
         }
 
-        // Auto save only when the turn is complete
-        // role = "assistant" && no pending tool_calls
+        return newMessage;
+    }
 
-        if (
-            this.config.autoSave &&
-            message.role === "assistant" &&
-            message.tool_calls === undefined
-        ) {
-            this.saveChat(/* isAutoSave */ true);
-        }
+    removePendingMessages() {
+        this.messages = this.messages.filter(msg => !msg.isPending);
     }
 
 
