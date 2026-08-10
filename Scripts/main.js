@@ -290,7 +290,7 @@ exports.activate = function() {
             {placeholder: "Ask Assistant"},
             (prompt) => {
                 if (prompt) {
-                    apiHandler.sendMessage(prompt);
+                    emitter.emit("sendMessage", prompt);
                 }
             }
         );
@@ -328,7 +328,7 @@ exports.activate = function() {
                     promptWithSelection += "```\n";
                     promptWithSelection += prompt;
 
-                    apiHandler.sendMessage(promptWithSelection);
+                    emitter.emit("sendMessage", promptWithSelection);
                 }
             }
         );

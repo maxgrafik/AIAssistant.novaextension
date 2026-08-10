@@ -46,15 +46,27 @@ class ChatDataProvider {
 
         emitter.on("updatePendingMessage", (chunk) => {
 
+            // Not streaming -> return
+
+            if (!this.config.showStream) {
+                return;
+            }
+
+            // No content -> return
+
             const content = chunk.choices?.[0]?.delta?.content;
             if (!content) {
                 return;
             }
 
+            // No pending message -> return
+
             const pendingMessage = this.session.messages.findLast(msg => msg.isPending);
             if (!pendingMessage) {
                 return;
             }
+
+            // Add chunk to pending message content
 
             if (pendingMessage.content === null) {
                 pendingMessage.content = "";
@@ -62,15 +74,29 @@ class ChatDataProvider {
 
             pendingMessage.content += content;
 
-            if (!this.config.showStream) {
-                return;
-            }
+
+            // Get current & new UIContent
 
             const curLines = pendingMessage.UIContent;
             const newLines = pendingMessage.wrapContent();
 
             const curLength = curLines.length;
             const newLength = newLines.length;
+
+
+            // New lines exceed pre-fill -> add hint and return
+
+            if (newLength > curLength) {
+                const i = curLength - 1;
+                if (curLines[i].text !== "Please wait ...") {
+                    curLines[i].text = "Please wait ...";
+                    this.scheduleUpdate(curLines[i]);
+                }
+                return;
+            }
+
+
+            // Compare lines, starting from the end
 
             const startIndex = Math.min(newLength, curLength) - 1;
 
@@ -84,7 +110,7 @@ class ChatDataProvider {
                 if (
                     newLineType === "UITextLine" &&
                     newLine.text === curLine.text &&
-                    newLine.text !== ""
+                    newLine.text !== "" // <- because empty lines may lead to false positives
                 ) {
                     break;
                 }
@@ -117,23 +143,19 @@ class ChatDataProvider {
                     // This is faster and smoother, but the actual
                     // code is not available until streaming is done
 
-                    curLine.text = `❯  [${newLine.language}]`;
+                    curLine.text = `❯  ${newLine.language}`;
                     this.scheduleUpdate(curLine);
                     break;
                 }
             }
+
+            // Cleanup unused pre-fill
 
             for (let i = newLength; i < curLength; i++) {
                 if (curLines[i]?.text !== "") {
                     curLines[i].text = "";
                     this.scheduleUpdate(curLines[i]);
                 }
-            }
-
-            if (newLength > curLength) {
-                const i = curLength - 1;
-                curLines[i].text = "[Please wait ...]";
-                this.scheduleUpdate(curLines[i]);
             }
         });
 
@@ -415,6 +437,7 @@ class ChatDataProvider {
     reset() {
         this.currentTurnIndex = null;
         this.showLastTurnOnly = this.config.showLastTurnOnly;
+        clearTimeout(this.updateTimer);
         this.updateItems = [];
         this.updateTimer = null;
     }

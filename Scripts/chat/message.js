@@ -126,7 +126,7 @@ class Message {
             let currentLine = leading;
             let currentLineLength = currentLine.length;
 
-            const words = paragraphText.split(/(?<!➜)\s+/); // spaces, except before url
+            const words = paragraphText.split(/(?<!➜)\s+/); // whitespace, except before converted url
             words.forEach(word => {
 
                 const wordLength = word.length;

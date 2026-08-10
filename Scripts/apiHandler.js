@@ -212,7 +212,7 @@ class APIHandler {
             // Get message content and token usage (if included)
 
             let content = "";
-            let promptTokens = 0;
+            let tokenUsage = null;
 
             for (const chunk of chatCompletionChunks) {
 
@@ -221,7 +221,7 @@ class APIHandler {
 
                 // Token Usage
                 if (chunk.usage) {
-                    promptTokens += chunk.usage.prompt_tokens || 0;
+                    tokenUsage = chunk.usage;
                 }
             }
 
@@ -243,7 +243,7 @@ class APIHandler {
             }
 
             this.emitter.emit("updateChatView", assistantMessage);
-            this.emitter.emit("updateTokens", promptTokens);
+            this.emitter.emit("updateTokens", tokenUsage);
 
 
             // Dispatch tool calls

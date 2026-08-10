@@ -20,6 +20,7 @@ class Session {
         this.messages = [];
 
         this.promptTokens = 0;
+        this.completionTokens = 0;
 
         this.filePath = null;
         this.createdAt = null;
@@ -113,8 +114,9 @@ class Session {
 
     //! Token update
 
-    updateTokens(promptTokens) {
-        this.promptTokens += promptTokens;
+    updateTokens(usage) {
+        this.promptTokens += usage?.prompt_tokens || 0;
+        this.completionTokens += usage?.completion_tokens || 0;
     }
 
 
@@ -243,6 +245,7 @@ class Session {
         });
 
         this.promptTokens = 0;
+        this.completionTokens = 0;
 
         this.filePath = null;
         this.createdAt = new Date().toISOString();
@@ -280,6 +283,7 @@ class Session {
             }
 
             this.promptTokens = chat.promptTokens || 0;
+            this.completionTokens = chat.completionTokens || 0;
 
             this.filePath = path;
             this.createdAt = chat.createdAt || null;
@@ -307,6 +311,7 @@ class Session {
                 createdAt: this.createdAt,
                 updatedAt: new Date().toISOString(),
                 promptTokens: this.promptTokens,
+                completionTokens: this.completionTokens,
                 messages: this.messages.map(msg => ({
                     role: msg.role,
                     content: msg.content,

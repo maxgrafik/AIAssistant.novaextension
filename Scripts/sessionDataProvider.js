@@ -51,7 +51,7 @@ class SessionDataProvider {
 
         emitter.on("updateTokens", (tokens) => {
             this.session.updateTokens(tokens);
-            this.tokenInfo.value = this.session.promptTokens;
+            this.tokenInfo.value = this.session.promptTokens + this.session.completionTokens;
             this.update(this.tokenInfo);
         });
 
