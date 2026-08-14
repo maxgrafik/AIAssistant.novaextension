@@ -8,6 +8,7 @@
 // What startet as "Hey, let's try this out!" became a massive rabbit hole
 
 const ChatDataProvider = require("chatDataProvider.js");
+const ChatViewHelper = require("chatViewHelper.js");
 const SessionDataProvider = require("sessionDataProvider.js");
 const APIHandler = require("apiHandler.js");
 const Session = require("chat/session.js");
@@ -16,6 +17,7 @@ const config = {
     serverURL: "",
     APIKey: null,
     chatWrapWidth: 60,
+    expandChatView: false,
     plainText: true,
     showLastTurnOnly: true,
     showStream: false,
@@ -348,6 +350,13 @@ exports.activate = function() {
         if (nova.fs.access(autoSaveFile, nova.fs.F_OK + nova.fs.R_OK)) {
             session.open(autoSaveFile);
         }
+    }
+
+
+    // Expand Chat View
+
+    if (config.expandChatView) {
+        ChatViewHelper.expandChatView();
     }
 };
 

@@ -207,6 +207,13 @@
                     "default": 60
                 },
                 {
+                    "key": "maxgrafik.AIAssistant.config.expandChatView",
+                    "type": "boolean",
+                    "title": "Expand Chat View",
+                    "description": "[Experimental] Automatically expands the chat area to its maximum height when opening a project.\nNote: Requires permission for Nova to control your computer using accessibility features.",
+                    "default": false
+                },
+                {
                     "key": "maxgrafik.AIAssistant.config.plainText",
                     "type": "boolean",
                     "title": "Plain Text",

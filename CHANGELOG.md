@@ -1,5 +1,6 @@
 ## Version 0.5.5
 
+- Added an experimental feature to automatically expand the chat view when opening a project
 - Some code cleanup
 
 
